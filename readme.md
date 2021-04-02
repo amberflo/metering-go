@@ -22,7 +22,7 @@ func main() {
 	//Instantiate a new metering client
 	Metering := metering.NewMeteringClient(apiKey)
 	//Optional ingest options
-	//Frequency at which queued data will be sent to API. Default is 60 seconds.
+	//Frequency at which queued data will be sent to API. Default is 1 second.
 	Metering.IntervalSeconds = 30 * time.Second
 	//Number of messages posted to the API. Default is 100.
 	Metering.BatchSize = 10
