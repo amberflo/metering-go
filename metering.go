@@ -38,22 +38,22 @@ type Message struct {
 
 //Metering message
 type MeterMessage struct {
-	UniqueId      string            `json:"unique_id"`
-	MeterName     string            `json:"meter_name"`
-	CustomerId    string            `json:"tenant_id"`
-	CustomerName  string            `json:"tenant"`
-	MeterValue    int64             `json:"meter_value"`
-	UtcTimeMillis int64             `json:"time"`
-	Dimensions    map[string]string `json:"dimensions,omitempty"`
+	UniqueId          string            `json:"uniqueId"`
+	MeterApiName      string            `json:"meterApiName"`
+	CustomerId        string            `json:"customerId"`
+	MeterValue        float64           `json:"meterValue"`
+	MeterTimeInMillis int64             `json:"meterTimeInMillis"`
+	Dimensions        map[string]string `json:"dimensions,omitempty"`
 	Message
 }
 
-type CustomerDetails struct {
+type Customer struct {
 	CustomerId   string            `json:"customerId"`
 	CustomerName string            `json:"customerName"`
 	Traits       map[string]string `json:"traits,omitempty"`
-	UpdateTime   string            `json:"updateTime,,omitempty"`
-	CreateTime   string            `json:"createTime,,omitempty"`
+	Enabled      bool              `json:"enabled,omitempty"`
+	UpdateTime   string            `json:"updateTime,omitempty"`
+	CreateTime   string            `json:"createTime,omitempty"`
 }
 
 // Amberflo.io metering client batches messages and flushes periodically at IntervalSeconds or
@@ -108,32 +108,32 @@ func NewMeteringClient(apiKey string) *Metering {
 	return m
 }
 
-//AddorUpdateCustomerDetails
-func (m *Metering) AddorUpdateCustomerDetails(customerDetails *CustomerDetails) error {
-	if customerDetails.CustomerId == "" || customerDetails.CustomerName == "" {
-		return errors.New("Customer info 'CustomerId' and 'CustomerName' are required fields.")
+//AddorUpdateCustomer
+func (m *Metering) AddorUpdateCustomer(customer *Customer) error {
+	if customer.CustomerId == "" || customer.CustomerName == "" {
+		return errors.New("customer info 'CustomerId' and 'CustomerName' are required fields")
 	}
 
-	err := m.sendCustomerDetailsToApi(customerDetails)
+	err := m.sendCustomerToApi(customer)
 	if err != nil {
 		m.log("Error adding or updating customer details: %s", err)
 	}
 	return err
 }
 
-func (m *Metering) sendCustomerDetailsToApi(payload *CustomerDetails) error {
-	signature := fmt.Sprintf("sendCustomerDetailsToApi(%v)", payload)
+func (m *Metering) sendCustomerToApi(payload *Customer) error {
+	signature := fmt.Sprintf("sendCustomerToApi(%v)", payload)
 
 	m.debug("Checking if customer deatils exist %s", payload.CustomerId)
-	urlGet := fmt.Sprintf("%s/customer-details-endpoint/?customerId=%s", m.Endpoint, payload.CustomerId)
-	data, err := m.sendHttpRequest("CustomerDetails", urlGet, "GET", nil)
+	urlGet := fmt.Sprintf("%s/customers/?customerId=%s", m.Endpoint, payload.CustomerId)
+	data, err := m.sendHttpRequest("Customers", urlGet, "GET", nil)
 	if err != nil {
 		return fmt.Errorf("error sending request: %s", err)
 	}
 
-	var customerDetails *CustomerDetails
+	var customer *Customer
 	if data != nil && string(data) != "{}" {
-		err = json.Unmarshal(data, &customerDetails)
+		err = json.Unmarshal(data, &customer)
 		if err != nil {
 			return fmt.Errorf("%s Error reading JSON body: %s", signature, err)
 		}
@@ -144,12 +144,12 @@ func (m *Metering) sendCustomerDetailsToApi(payload *CustomerDetails) error {
 		return fmt.Errorf("%s error marshalling payload: %s", signature, err)
 	}
 
-	url := fmt.Sprintf("%s/customer-details-endpoint", m.Endpoint)
+	url := fmt.Sprintf("%s/customers", m.Endpoint)
 	httpMethod := "POST"
-	if customerDetails != nil && customerDetails.CustomerId == payload.CustomerId {
+	if customer != nil && customer.CustomerId == payload.CustomerId {
 		httpMethod = "PUT"
 	}
-	data, err = m.sendHttpRequest("CustomerDetails", url, httpMethod, b)
+	_, err = m.sendHttpRequest("customers", url, httpMethod, b)
 	if err != nil {
 		return fmt.Errorf("%s error making %s http call: %s", signature, httpMethod, err)
 	}
@@ -161,16 +161,13 @@ func (m *Metering) sendCustomerDetailsToApi(payload *CustomerDetails) error {
 func (m *Metering) Meter(msg *MeterMessage) error {
 	currentMillis := time.Now().UnixNano()/int64(time.Millisecond) + (5 * 60 * 1000)
 
-	if msg.MeterName == "" {
+	if msg.MeterApiName == "" {
 		return errors.New("'MeterName' is required field.")
 	}
-	if msg.CustomerName == "" || msg.CustomerId == "" {
-		return errors.New("Customer info 'CustomerId' and 'CustomerName' are required fields.")
-	}
-	if msg.UtcTimeMillis < 1 {
+	if msg.MeterTimeInMillis < 1 {
 		return errors.New("Invalid UtcTimeMillis. It should be milliseconds in UTC")
 	}
-	if msg.UtcTimeMillis > currentMillis {
+	if msg.MeterTimeInMillis > currentMillis {
 		return errors.New("'UtcTimeMillis' is invalid, future date not allowed")
 	}
 
@@ -266,7 +263,7 @@ func (m *Metering) send(msgs []interface{}) error {
 //Ingest Api Client code
 func (m *Metering) ingestToApi(b []byte) error {
 	m.log("Ingest API Payload %s", string(b))
-	url := m.Endpoint + "/ingest-endpoint"
+	url := m.Endpoint + "/ingest"
 	_, err := m.sendHttpRequest("Ingest Api", url, "POST", b)
 
 	if err != nil {

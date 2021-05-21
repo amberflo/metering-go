@@ -10,17 +10,41 @@ import (
 	"os"
 )
 
-type UsagePayload struct {
-	MeterId      string `json:"meter_id,omitempty"`
-	MeterName    string `json:"meter_name,omitempty"`
-	CustomerName string `json:"tenant,omitempty"`
+type AggregationType string
+
+const (
+	Sum AggregationType = "SUM"
+	Min AggregationType = "MIN"
+	Max AggregationType = "MAX"
+)
+
+type AggregationInterval string
+
+const (
+	Hour  AggregationInterval = "HOUR"
+	Day   AggregationInterval = "DAY"
+	Week  AggregationInterval = "WEEK"
+	Month AggregationInterval = "MONTH"
+)
+
+type Take struct {
+	Limit       int64 `json:"limit"`
+	IsAscending bool  `json:"isAscending,omitempty"`
 }
 
-type UsageResult struct {
-	CustomerName   string `json:"tenant"`
-	MeterName      string `json:"measure_name"`
-	Date           string `json:"date"`
-	OperationValue string `json:"operation_value"`
+type TimeRange struct {
+	StartTimeInSeconds int64 `json:"startTimeInSeconds"`
+	EndTimeInSeconds   int64 `json:"endTimeInSeconds,omitempty"`
+}
+
+type UsagePayload struct {
+	MeterApiName         string              `json:"meterApiName"`
+	Aggregation          AggregationType     `json:"aggregation"`
+	TimeGroupingInterval AggregationInterval `json:"timeGroupingInterval"`
+	GroupBy              []string            `json:"groupBy,omitempty"`
+	TimeRange            *TimeRange          `json:"timeRange"`
+	Take                 *Take               `json:"take,omitempty"`
+	Filter               map[string]string   `json:"filter,omitempty"`
 }
 
 type UsageClient struct {
@@ -41,17 +65,19 @@ func NewUsageClient(apiKey string) *UsageClient {
 	return u
 }
 
-func (u *UsageClient) GetUsage(payload *UsagePayload) ([]UsageResult, error) {
-	url := fmt.Sprintf("%s/usage-endpoint", Endpoint)
+func (u *UsageClient) GetUsage(payload *UsagePayload) (*string, error) {
+	url := fmt.Sprintf("%s/usage", Endpoint)
 
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling payload: %s", err)
 	}
 
+	u.log("Usage Payload %s", string(b))
+
 	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
 	if err != nil {
-		return nil, fmt.Errorf("Error creating request: %s", err)
+		return nil, fmt.Errorf("error creating request: %s", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-API-KEY", u.ApiKey)
@@ -62,6 +88,8 @@ func (u *UsageClient) GetUsage(payload *UsagePayload) ([]UsageResult, error) {
 	}
 	//finally
 	defer res.Body.Close()
+
+	u.log("Usage API response: %s", res.Status)
 
 	body, err := ioutil.ReadAll(res.Body)
 
@@ -74,16 +102,16 @@ func (u *UsageClient) GetUsage(payload *UsagePayload) ([]UsageResult, error) {
 		return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
 	}
 
-	var result [][]UsageResult
-	if body != nil {
-		err = json.Unmarshal(body, &result)
-		if err != nil {
-			u.log("Usage API error reading from JSON: %s %s", err, string(body))
-			return nil, fmt.Errorf("Error reading JSON body: %s", err)
-		}
-	}
+	//In case we need to return map
+	// var jsonBody interface{}
+	// err = json.Unmarshal(body, &jsonBody)
+	// if err != nil {
+	// 	u.log("Usage API error: Error decoding the response body")
+	// 	return nil, fmt.Errorf("error decoding the response body")
+	// }
 
-	return result[0], nil
+	v := string(body)
+	return &v, nil
 }
 
 func (u *UsageClient) log(msg string, args ...interface{}) {
