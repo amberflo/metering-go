@@ -86,7 +86,7 @@ func main() {
 		GroupBy:              []string{"customerId"},
 		TimeRange:            timeRange,
 	})
-	fmt.Println("Usage by meterApiName")
+	fmt.Println("Usage by meterApiName in json format")
 	printUsageData(*usageResult, err)
 
 	//Example 2: filter for a meter for specific customer
@@ -102,7 +102,7 @@ func main() {
 		TimeRange:            timeRange,
 		Filter:               filter,
 	})
-	fmt.Println("Usage for meter for specific customer")
+	fmt.Println("Usage for meter for specific customer in json format")
 	printUsageData(*usageResult, err)
 }
 
