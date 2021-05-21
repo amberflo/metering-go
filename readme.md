@@ -32,7 +32,7 @@ func main() {
 	//Define dimesions for your meters. Dimensions can be used as filters.
 	dimensions := make(map[string]string)
 	dimensions["region"] = "Midwest"
-	dimensions["tenant_type"] = "Tech"
+	dimensions["customerType"] = "Tech"
 
 	for i := 0; i < 50; i++ {
 		utcMillis := time.Now().UnixNano() / int64(time.Millisecond)
@@ -40,12 +40,11 @@ func main() {
 		//Queue will be flushed asyncrhonously when Metering.BatchSize is exceeded
 		//or periodically at Metering.IntervalSeconds
 		meteringError := Metering.Meter(&metering.MeterMessage{
-			MeterName:     "ApiCalls-From-Go",
-			CustomerId:    "1234",
-			CustomerName:  "Dell",
-			MeterValue:    int64(i) + 234,
-			UtcTimeMillis: utcMillis,
-			Dimensions:    dimensions,
+			MeterApiName:      "ApiCalls-From-Go",
+			CustomerId:        "1234",
+			MeterValue:        float64(i) + 234.0,
+			MeterTimeInMillis: utcMillis,
+			Dimensions:        dimensions,
 		})
 		if meteringError != nil {
 			fmt.Println("Metering error: ", meteringError)
@@ -76,37 +75,44 @@ func main() {
 	//initialize the usage client
 	UsageClient := metering.NewUsageClient(apiKey)
 
-	//OPTION 1: get usage by meter name. Synchronous call.
-	//This will filter usage data by meter name and customer
+	// Example 1: group by customers for a specific meter and all customers
+	// setup usage query params
+	// visit following link for description of payload:
+	// https://amberflo.readme.io/reference#usage
 	usageResult, err := UsageClient.GetUsage(&metering.UsagePayload{
-		MeterName:    "ApiCalls-From-Go",
-		CustomerName: "Dell",
+		MeterApiName:         "ApiCalls-From-Go",
+		Aggregation:          metering.Sum,
+		TimeGroupingInterval: metering.Day,
+		GroupBy:              []string{"customerId"},
+		TimeRange:            timeRange,
 	})
-	fmt.Println("Usage by meter name")
-	printUsageData(usageResult, err)
+	fmt.Println("Usage by meterApiName")
+	printUsageData(*usageResult, err)
 
-	//OPTION 2: get usage data by meter id. Synchronous call.
-	//This will filter the usage by meter id and customer
+	//Example 2: filter for a meter for specific customer
+	//setup usage query params
+	filter := make(map[string]string)
+	filter["customerId"] = "1234"
+
 	usageResult, err = UsageClient.GetUsage(&metering.UsagePayload{
-		MeterId:      "my-meter-id",
-		CustomerName: "Dell",
+		MeterApiName:         "ApiCalls-From-Go",
+		Aggregation:          metering.Sum,
+		TimeGroupingInterval: metering.Day,
+		GroupBy:              []string{"customerId"},
+		TimeRange:            timeRange,
+		Filter:               filter,
 	})
-	fmt.Println("Usage by meter id")
-	printUsageData(usageResult, err)
+	fmt.Println("Usage for meter for specific customer")
+	printUsageData(*usageResult, err)
 }
 
-func printUsageData(usageResult []metering.UsageResult, err error) {
+func printUsageData(usageResult string, err error) {
 	if err != nil {
 		fmt.Println("Usage error: ", err)
 		return
 	}
-	if len(usageResult) < 1 {
-		fmt.Println("No usage data found")
-		return
-	}
-	for _, usage := range usageResult {
-		fmt.Printf("%+v\n", usage)
-	}
+
+	fmt.Println(usageResult)
 }
 ```
 
@@ -126,18 +132,19 @@ func main() {
 	//Instantiate a new metering client
 	Metering := metering.NewMeteringClient(apiKey)
 
-	//setup customer details
+	//setup customer
 	//Traits are optional. Traits can be used as filters or aggregation buckets.
 	traits := make(map[string]string)
-	traits["region"] = "Midwest"
-	traits["tenant_type"] = "Tech"
+	traits["stripeId"] = "cus_AJ6bY3VqcaLAEs"
+	traits["customerType"] = "Tech"
 
-	customerDetails := &metering.CustomerDetails{
+	customer := &metering.Customer{
 		CustomerId:   "1234",
 		CustomerName: "Dell",
 		Traits:       traits,
+		Enabled:      true,
 	}
-	err := Metering.AddorUpdateCustomerDetails(customerDetails)
+	err := Metering.AddorUpdateCustomer(customer)
 	if err != nil {
 		fmt.Println("Error creating customer details: ", err)
 	}
