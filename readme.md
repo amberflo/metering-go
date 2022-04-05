@@ -141,6 +141,7 @@ func main() {
 	customer := &metering.Customer{
 		CustomerId:   "1234",
 		CustomerName: "Dell",
+		CustomerEmail: "test@dell.com",
 		Traits:       traits,
 		Enabled:      true,
 	}

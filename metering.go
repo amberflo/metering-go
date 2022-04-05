@@ -48,12 +48,13 @@ type MeterMessage struct {
 }
 
 type Customer struct {
-	CustomerId   string            `json:"customerId"`
-	CustomerName string            `json:"customerName"`
-	Traits       map[string]string `json:"traits,omitempty"`
-	Enabled      bool              `json:"enabled,omitempty"`
-	UpdateTime   string            `json:"updateTime,omitempty"`
-	CreateTime   string            `json:"createTime,omitempty"`
+	CustomerId    string            `json:"customerId"`
+	CustomerName  string            `json:"customerName"`
+	CustomerEmail string            `json:"customerEmail"`
+	Traits        map[string]string `json:"traits,omitempty"`
+	Enabled       bool              `json:"enabled,omitempty"`
+	UpdateTime    string            `json:"updateTime,omitempty"`
+	CreateTime    string            `json:"createTime,omitempty"`
 }
 
 // Amberflo.io metering client batches messages and flushes periodically at IntervalSeconds or
