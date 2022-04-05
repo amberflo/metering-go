@@ -53,8 +53,8 @@ type Customer struct {
 	CustomerEmail string            `json:"customerEmail"`
 	Traits        map[string]string `json:"traits,omitempty"`
 	Enabled       bool              `json:"enabled,omitempty"`
-	UpdateTime    string            `json:"updateTime,omitempty"`
-	CreateTime    string            `json:"createTime,omitempty"`
+	UpdateTime    int64             `json:"updateTime,omitempty"`
+	CreateTime    int64             `json:"createTime,omitempty"`
 }
 
 // Amberflo.io metering client batches messages and flushes periodically at IntervalSeconds or

@@ -139,11 +139,11 @@ func main() {
 	traits["customerType"] = "Tech"
 
 	customer := &metering.Customer{
-		CustomerId:   "1234",
-		CustomerName: "Dell",
+		CustomerId:    "1234",
+		CustomerName:  "Dell",
 		CustomerEmail: "test@dell.com",
-		Traits:       traits,
-		Enabled:      true,
+		Traits:        traits,
+		Enabled:       true,
 	}
 	err := Metering.AddorUpdateCustomer(customer)
 	if err != nil {
