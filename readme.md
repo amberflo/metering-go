@@ -66,10 +66,9 @@ func main() {
 ```
 
 ### Cancel an ingested meter
-A meter can be cancelled by resending it with the same ```uniqueId``` and setting ```alfo.cancel_previous_resource_event``` dimension to "true".
+A meter can be cancelled by resending the same ingestion event and setting ```alfo.cancel_previous_resource_event``` dimension to "true".
 
 ```go
-	dimensions := make(map[string]string)
 	dimensions["alfo.cancel_previous_resource_event"] = "true"	
 
 	//Use the uniqueId from the original ingested meter
