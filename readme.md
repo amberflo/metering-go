@@ -205,7 +205,7 @@ func main() {
 ## Sample metering with Custom Logger using zerlog
 By default, metering-go uses the default GO logger. 
 
-You can inject your own logger by implement the following interface ```metering.Logger```:
+You can inject your own logger by implementing the following interface ```metering.Logger```:
 ```go
 type Logger interface {
 	Log(v ...interface{})
@@ -213,7 +213,7 @@ type Logger interface {
 }
 ```
 
-Define custom logger: 
+Define the custom logger: 
 ```go
 package main
 
