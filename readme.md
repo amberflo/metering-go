@@ -71,7 +71,7 @@ A meter can be cancelled by resending the same ingestion event and setting ```al
 ```go
 	dimensions["alfo.cancel_previous_resource_event"] = "true"	
 
-	//Use the uniqueId from the original ingested meter
+	//cancel an ingested meter
 	meteringError := Metering.Meter(&metering.MeterMessage{
 		UniqueId:          uniqueId,
 		MeterApiName:      "ApiCalls-From-Go",
@@ -163,6 +163,8 @@ func main() {
 	//obtain your Amberflo API Key
 	apiKey := "my-api-key"
 	customerId := "dell-8"
+	//Automatically create customer in Stripe 
+  	//and add stripeId to traits
 	createCustomerInStripe := true
 
 	//Instantiate a new metering client
