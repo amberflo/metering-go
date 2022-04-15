@@ -3,13 +3,11 @@ package metering
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sync"
 
 	"bytes"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"time"
 
@@ -64,7 +62,7 @@ type Metering struct {
 	// IntervalSeconds is the frequency at which messages are flushed.
 	IntervalSeconds time.Duration
 	BatchSize       int
-	Logger          *log.Logger
+	Logger          Logger
 	Debug           bool
 	Client          http.Client
 	ApiKey          string
@@ -88,11 +86,17 @@ type Metering struct {
 
 //Create a new instance of the metering client
 func NewMeteringClient(apiKey string) *Metering {
+	m := NewMeteringClientWithCustomLogger(apiKey, NewAmberfloDefaultLogger())
+	return m
+}
+
+//Create a new instance with a custom logger
+func NewMeteringClientWithCustomLogger(apiKey string, logger Logger) *Metering {
 	m := &Metering{
 		Endpoint:        Endpoint,
 		IntervalSeconds: 1 * time.Second,
 		BatchSize:       BATCH_SIZE,
-		Logger:          log.New(os.Stderr, "amberflo.io ", log.LstdFlags),
+		Logger:          logger,
 		Debug:           false,
 		Client:          *http.DefaultClient,
 		ApiKey:          apiKey,
@@ -104,41 +108,46 @@ func NewMeteringClient(apiKey string) *Metering {
 	}
 
 	m.log("Instantiating amberflo.io metering client")
-
 	m.upcond.L = &m.mutex
 	return m
 }
 
 //AddorUpdateCustomer
-func (m *Metering) AddorUpdateCustomer(customer *Customer) error {
+func (m *Metering) AddorUpdateCustomer(customer *Customer, createInStripe bool) error {
 	if customer.CustomerId == "" || customer.CustomerName == "" {
 		return errors.New("customer info 'CustomerId' and 'CustomerName' are required fields")
 	}
 
-	err := m.sendCustomerToApi(customer)
+	err := m.sendCustomerToApi(customer, createInStripe)
 	if err != nil {
 		m.log("Error adding or updating customer details: %s", err)
 	}
 	return err
 }
 
-func (m *Metering) sendCustomerToApi(payload *Customer) error {
-	signature := fmt.Sprintf("sendCustomerToApi(%v)", payload)
-
-	m.debug("Checking if customer deatils exist %s", payload.CustomerId)
-	urlGet := fmt.Sprintf("%s/customers/?customerId=%s", m.Endpoint, payload.CustomerId)
+func (m *Metering) GetCustomer(customerId string) (*Customer, error) {
+	signature := fmt.Sprintf("GetCustomer(%s)", customerId)
+	var customer *Customer
+	urlGet := fmt.Sprintf("%s/customers/?customerId=%s", m.Endpoint, customerId)
 	data, err := m.sendHttpRequest("Customers", urlGet, "GET", nil)
 	if err != nil {
-		return fmt.Errorf("error sending request: %s", err)
+		return nil, fmt.Errorf("error sending request: %s", err)
 	}
-
-	var customer *Customer
 	if data != nil && string(data) != "{}" {
 		err = json.Unmarshal(data, &customer)
 		if err != nil {
-			return fmt.Errorf("%s Error reading JSON body: %s", signature, err)
+			return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
 		}
 	}
+
+	return customer, err
+}
+
+func (m *Metering) sendCustomerToApi(payload *Customer, createInStripe bool) error {
+	signature := fmt.Sprintf("sendCustomerToApi(%v)", payload)
+
+	m.debug("Checking if customer deatils exist %s", payload.CustomerId)
+	customer, _ := m.GetCustomer(payload.CustomerId)
 
 	b, err := json.Marshal(payload)
 	if err != nil {
@@ -146,9 +155,12 @@ func (m *Metering) sendCustomerToApi(payload *Customer) error {
 	}
 
 	url := fmt.Sprintf("%s/customers", m.Endpoint)
-	httpMethod := "POST"
+	httpMethod := ""
 	if customer != nil && customer.CustomerId == payload.CustomerId {
 		httpMethod = "PUT"
+	} else {
+		httpMethod = "POST"
+		url = fmt.Sprintf("%s/customers?autoCreateCustomerInStripe=%t", m.Endpoint, createInStripe)
 	}
 	_, err = m.sendHttpRequest("customers", url, httpMethod, b)
 	if err != nil {
@@ -172,7 +184,9 @@ func (m *Metering) Meter(msg *MeterMessage) error {
 		return errors.New("'UtcTimeMillis' is invalid, future date not allowed")
 	}
 
-	msg.UniqueId = m.uid()
+	if msg.UniqueId != "" {
+		msg.UniqueId = m.uid()
+	}
 	m.log("Queuing meter message: %+v", msg)
 	m.queue(msg)
 	return nil
@@ -361,14 +375,14 @@ func (m *Metering) sendHttpRequest(apiName string, url string, httpMethod string
 	return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
 }
 
-func (m *Metering) debug(msg string, args ...interface{}) {
+func (m *Metering) debug(args ...interface{}) {
 	if m.Debug {
-		m.Logger.Printf(msg, args...)
+		m.Logger.Log(args...)
 	}
 }
 
-func (m *Metering) log(msg string, args ...interface{}) {
-	m.Logger.Printf(msg, args...)
+func (m *Metering) log(args ...interface{}) {
+	m.Logger.Log(args...)
 }
 
 func (m *Message) setTimestamp(s string) {

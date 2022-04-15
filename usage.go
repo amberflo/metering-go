@@ -44,7 +44,39 @@ type UsagePayload struct {
 	GroupBy              []string            `json:"groupBy,omitempty"`
 	TimeRange            *TimeRange          `json:"timeRange"`
 	Take                 *Take               `json:"take,omitempty"`
-	Filter               map[string]string   `json:"filter,omitempty"`
+	Filter               map[string][]string `json:"filter,omitempty"`
+}
+
+type MeterAggregationMetadata struct {
+	MeterApiName         string              `json:"meterApiName"`
+	Aggregation          AggregationType     `json:"aggregation"`
+	TimeGroupingInterval AggregationInterval `json:"timeGroupingInterval"`
+	GroupBy              []string            `json:"groupBy,omitempty"`
+	TimeRange            *TimeRange          `json:"timeRange"`
+	Take                 *Take               `json:"take,omitempty"`
+	Filter               map[string][]string `json:"filter,omitempty"`
+}
+
+type GroupInfo struct {
+	GroupInfo map[string]string `json:"groupInfo"`
+}
+
+type DetailedAggregationValue struct {
+	PercentageFromPrevious float64 `json:"percentageFromPrevious"`
+	Value                  float64 `json:"value"`
+	SecondsSinceEpochUtc   int64   `json:"secondsSinceEpochUtc"`
+}
+
+type DetailedMeterAggregationGroup struct {
+	GroupValue float64                    `json:"groupValue"`
+	Group      *GroupInfo                 `json:"group"`
+	Values     []DetailedAggregationValue `json:"values"`
+}
+
+type DetailedMeterAggregation struct {
+	SecondsSinceEpochIntervals []int64                         `json:"secondsSinceEpochIntervals,omitempty"`
+	Metadata                   *MeterAggregationMetadata       `json:"metadata,omitempty"`
+	ClientMeters               []DetailedMeterAggregationGroup `json:"clientMeters,omitempty"`
 }
 
 type UsageClient struct {
@@ -65,7 +97,7 @@ func NewUsageClient(apiKey string) *UsageClient {
 	return u
 }
 
-func (u *UsageClient) GetUsage(payload *UsagePayload) (*string, error) {
+func (u *UsageClient) GetUsageAsJson(payload *UsagePayload) (*string, error) {
 	url := fmt.Sprintf("%s/usage", Endpoint)
 
 	b, err := json.Marshal(payload)
@@ -112,6 +144,20 @@ func (u *UsageClient) GetUsage(payload *UsagePayload) (*string, error) {
 
 	v := string(body)
 	return &v, nil
+}
+
+func (u *UsageClient) GetUsage(payload *UsagePayload) (*DetailedMeterAggregation, error) {
+	usageResult, err := u.GetUsageAsJson(payload)
+
+	if err != nil {
+		u.log("Usage API error: %s", err)
+		return nil, fmt.Errorf("error reading response body: %s", err)
+	}
+
+	var result DetailedMeterAggregation
+	json.Unmarshal([]byte(*usageResult), &result)
+
+	return &result, nil
 }
 
 func (u *UsageClient) log(msg string, args ...interface{}) {
