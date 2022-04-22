@@ -20,15 +20,24 @@ import (
 func main() {
 	//obtain your Amberflo API Key
 	apiKey := "my-api-key"
-	//Instantiate a new metering client
-	Metering := metering.NewMeteringClient(apiKey)
+
 	//Optional ingest options
 	//Frequency at which queued data will be sent to API. Default is 1 second.
-	Metering.IntervalSeconds = 30 * time.Second
+	intervalSeconds := 30 * time.Second
 	//Number of messages posted to the API. Default is 100.
-	Metering.BatchSize = 10
+	batchSize := 5
 	//Debug mode logging. Default is false.
-	Metering.Debug = true
+	debug := true
+
+	//Instantiate a new metering client
+	Metering := metering.NewMeteringClient(
+		apiKey,
+		metering.WithBatchSize(batchSize),
+		metering.WithIntervalSeconds(intervalSeconds),
+		metering.WithDebug(debug),
+	)
+
+	customerId := "dell-10"
 
 	//Define dimesions for your meters. Dimensions can be used as filters.
 	dimensions := make(map[string]string)
@@ -66,10 +75,10 @@ func main() {
 ```
 
 ### Cancel an ingested meter
-A meter can be cancelled by resending the same ingestion event and setting ```alfo.cancel_previous_resource_event``` dimension to "true".
+A meter can be cancelled by resending the same ingestion event and setting ```aflo.cancel_previous_resource_event``` dimension to "true".
 
 ```go
-	dimensions["alfo.cancel_previous_resource_event"] = "true"	
+	dimensions["aflo.cancel_previous_resource_event"] = "true"	
 
 	//cancel an ingested meter
 	meteringError := Metering.Meter(&metering.MeterMessage{
@@ -177,7 +186,6 @@ func main() {
 	}
 
 	//setup customer
-	//Traits are optional. Traits can be used as filters or aggregation buckets.
 	if customer != nil {
 		//customer exists
 		//update properties
@@ -188,6 +196,13 @@ func main() {
 		traits := make(map[string]string)
 		traits["region"] = "us-west"
 		traits["customerType"] = "Tech"
+
+		//In case createCustomerInStripe is false, set the trait for stripeId
+		//traits[metering.STRIPE_TRAIT_KEY] = "cus_LVxxpBQvyN3V49"
+
+		//Set the AWS marketplace ID trait
+		//traits[metering.AWS_MARKETPLACE_TRAIT_KEY] = "aws_marketplace_id"
+
 		customer = &metering.Customer{
 			CustomerId:    customerId,
 			CustomerName:  "Dell",
@@ -197,10 +212,13 @@ func main() {
 		}
 	}
 
-	err = Metering.AddorUpdateCustomer(customer, createCustomerInStripe)
+	customer, err = Metering.AddorUpdateCustomer(customer, createCustomerInStripe)
 	if err != nil {
 		fmt.Println("Error creating customer details: ", err)
 	}
+
+	customerStatus := fmt.Sprintf("Stripe id for customer: %s", customer.Traits[metering.STRIPE_TRAIT_KEY])
+	fmt.Println(customerStatus)
 }
 ```
 
@@ -261,6 +279,9 @@ func main() {
 	customerLogger := NewCustomLogger()
 
 	//Instantiate a new metering client with custom logger
-	Metering := metering.NewMeteringClientWithCustomLogger(apiKey, customerLogger)
+	Metering := metering.NewMeteringClient(
+		apiKey,
+		metering.WithLogger(customerLogger),
+	)
 }
 ```

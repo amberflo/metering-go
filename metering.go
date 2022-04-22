@@ -3,6 +3,7 @@ package metering
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"sync"
 
 	"bytes"
@@ -16,9 +17,13 @@ import (
 	"github.com/xtgo/uuid"
 )
 
-const Endpoint = "https://app.amberflo.io"
-const RETRY_COUNT = 5
-const BATCH_SIZE = 100
+const (
+	Endpoint                  = "https://app.amberflo.io"
+	RETRY_COUNT               = 5
+	BATCH_SIZE                = 100
+	AWS_MARKETPLACE_TRAIT_KEY = "awsm.customerIdentifier"
+	STRIPE_TRAIT_KEY          = "stripeId"
+)
 
 var Backo = backo.DefaultBacko()
 
@@ -55,6 +60,32 @@ type Customer struct {
 	CreateTime    int64             `json:"createTime,omitempty"`
 }
 
+type MeteringOption func(*Metering)
+
+func WithDebug(debug bool) MeteringOption {
+	return func(m *Metering) {
+		m.Debug = debug
+	}
+}
+
+func WithIntervalSeconds(intervalSeconds time.Duration) MeteringOption {
+	return func(m *Metering) {
+		m.IntervalSeconds = intervalSeconds
+	}
+}
+
+func WithBatchSize(batchSize int) MeteringOption {
+	return func(m *Metering) {
+		m.BatchSize = batchSize
+	}
+}
+
+func WithLogger(logger Logger) MeteringOption {
+	return func(m *Metering) {
+		m.Logger = logger
+	}
+}
+
 // Amberflo.io metering client batches messages and flushes periodically at IntervalSeconds or
 // when the BatchSize limit is exceeded.
 type Metering struct {
@@ -84,19 +115,12 @@ type Metering struct {
 	counter int
 }
 
-//Create a new instance of the metering client
-func NewMeteringClient(apiKey string) *Metering {
-	m := NewMeteringClientWithCustomLogger(apiKey, NewAmberfloDefaultLogger())
-	return m
-}
-
 //Create a new instance with a custom logger
-func NewMeteringClientWithCustomLogger(apiKey string, logger Logger) *Metering {
+func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	m := &Metering{
 		Endpoint:        Endpoint,
 		IntervalSeconds: 1 * time.Second,
 		BatchSize:       BATCH_SIZE,
-		Logger:          logger,
 		Debug:           false,
 		Client:          *http.DefaultClient,
 		ApiKey:          apiKey,
@@ -107,22 +131,33 @@ func NewMeteringClientWithCustomLogger(apiKey string, logger Logger) *Metering {
 		uid:             uid,
 	}
 
-	m.log("Instantiating amberflo.io metering client")
+	//iterate through each option
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	if m.Logger == nil {
+		m.Logger = NewAmberfloDefaultLogger()
+		m.log("instantiated the default logger")
+	}
+
+	m.log("instantiating amberflo.io metering client")
 	m.upcond.L = &m.mutex
 	return m
 }
 
-//AddorUpdateCustomer
-func (m *Metering) AddorUpdateCustomer(customer *Customer, createInStripe bool) error {
+func (m *Metering) AddorUpdateCustomer(customer *Customer, createInStripe bool) (*Customer, error) {
 	if customer.CustomerId == "" || customer.CustomerName == "" {
-		return errors.New("customer info 'CustomerId' and 'CustomerName' are required fields")
+		return nil, errors.New("customer info 'CustomerId' and 'CustomerName' are required fields")
 	}
 
-	err := m.sendCustomerToApi(customer, createInStripe)
+	customer, err := m.sendCustomerToApi(customer, createInStripe)
 	if err != nil {
-		m.log("Error adding or updating customer details: %s", err)
+		m.logf("Error adding or updating customer details: %s", err)
+		return nil, err
 	}
-	return err
+
+	return customer, nil
 }
 
 func (m *Metering) GetCustomer(customerId string) (*Customer, error) {
@@ -140,18 +175,18 @@ func (m *Metering) GetCustomer(customerId string) (*Customer, error) {
 		}
 	}
 
-	return customer, err
+	return customer, nil
 }
 
-func (m *Metering) sendCustomerToApi(payload *Customer, createInStripe bool) error {
+func (m *Metering) sendCustomerToApi(payload *Customer, createInStripe bool) (*Customer, error) {
 	signature := fmt.Sprintf("sendCustomerToApi(%v)", payload)
 
-	m.debug("Checking if customer deatils exist %s", payload.CustomerId)
+	m.debugf("Checking if customer deatils exist %s", payload.CustomerId)
 	customer, _ := m.GetCustomer(payload.CustomerId)
 
 	b, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("%s error marshalling payload: %s", signature, err)
+		return nil, fmt.Errorf("%s error marshalling payload: %s", signature, err)
 	}
 
 	url := fmt.Sprintf("%s/customers", m.Endpoint)
@@ -162,32 +197,34 @@ func (m *Metering) sendCustomerToApi(payload *Customer, createInStripe bool) err
 		httpMethod = "POST"
 		url = fmt.Sprintf("%s/customers?autoCreateCustomerInStripe=%t", m.Endpoint, createInStripe)
 	}
-	_, err = m.sendHttpRequest("customers", url, httpMethod, b)
+	b, err = m.sendHttpRequest("customers", url, httpMethod, b)
 	if err != nil {
-		return fmt.Errorf("%s error making %s http call: %s", signature, httpMethod, err)
+		return nil, fmt.Errorf("%s error making %s http call: %s", signature, httpMethod, err)
 	}
 
-	return nil
+	if b != nil {
+		err = json.Unmarshal(b, &customer)
+		if err != nil {
+			return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
+		}
+	}
+
+	return customer, nil
 }
 
 //Queue a metering message to send to Ingest API. Messages are flushes periodically at IntervalSeconds or when the BatchSize limit is exceeded.
 func (m *Metering) Meter(msg *MeterMessage) error {
-	currentMillis := time.Now().UnixNano()/int64(time.Millisecond) + (5 * 60 * 1000)
-
 	if msg.MeterApiName == "" {
-		return errors.New("'MeterName' is required field.")
+		return errors.New("'MeterName' is required field")
 	}
 	if msg.MeterTimeInMillis < 1 {
-		return errors.New("Invalid UtcTimeMillis. It should be milliseconds in UTC")
-	}
-	if msg.MeterTimeInMillis > currentMillis {
-		return errors.New("'UtcTimeMillis' is invalid, future date not allowed")
+		return errors.New("invalid UtcTimeMillis: should be milliseconds in UTC")
 	}
 
-	if msg.UniqueId != "" {
+	if strings.Trim(msg.UniqueId, " ") == "" {
 		msg.UniqueId = m.uid()
 	}
-	m.log("Queuing meter message: %+v", msg)
+	m.logf("Queuing meter message: %+v", msg)
 	m.queue(msg)
 	return nil
 }
@@ -263,12 +300,12 @@ func (m *Metering) send(msgs []interface{}) error {
 	//retry attempts to call Ingest API
 	for i := 0; i < RETRY_COUNT; i++ {
 		if i > 0 {
-			m.log("Ingest Api call retry attempt: %d", i)
+			m.logf("Ingest Api call retry attempt: %d", i)
 		}
 		if err = m.ingestToApi(b); err == nil {
 			return nil
 		}
-		m.log("Retry attempt: %d error: %s ", i, err.Error())
+		m.logf("Retry attempt: %d error: %s ", i, err.Error())
 		Backo.Sleep(i)
 	}
 
@@ -277,7 +314,7 @@ func (m *Metering) send(msgs []interface{}) error {
 
 //Ingest Api Client code
 func (m *Metering) ingestToApi(b []byte) error {
-	m.log("Ingest API Payload %s", string(b))
+	m.logf("Ingest API Payload %s", string(b))
 	url := m.Endpoint + "/ingest"
 	_, err := m.sendHttpRequest("Ingest Api", url, "POST", b)
 
@@ -293,7 +330,7 @@ func (m *Metering) loop() {
 	var msgs []interface{}
 	tick := time.NewTicker(m.IntervalSeconds)
 	m.log("Listener thread and timer have started")
-	m.log("loop() ==> Effective batch size %d interval in seconds %d retry attempts %d", m.BatchSize, m.IntervalSeconds, RETRY_COUNT)
+	m.logf("loop() ==> Effective batch size %d interval in seconds %d retry attempts %d", m.BatchSize, m.IntervalSeconds, RETRY_COUNT)
 
 	for {
 		//select to wait on multiple communication operations
@@ -302,10 +339,10 @@ func (m *Metering) loop() {
 
 		//process new meter message
 		case msg := <-m.msgs:
-			m.debug("buffer (%d/%d) %v", len(msgs), m.BatchSize, msg)
+			m.debugf("buffer (%d/%d) %v", len(msgs), m.BatchSize, msg)
 			msgs = append(msgs, msg)
 			if len(msgs) >= m.BatchSize {
-				m.debug("exceeded %d messages – flushing", m.BatchSize)
+				m.debugf("exceeded %d messages – flushing", m.BatchSize)
 				m.sendAsync(msgs)
 				msgs = make([]interface{}, 0, m.BatchSize)
 			}
@@ -313,7 +350,7 @@ func (m *Metering) loop() {
 		//timer event
 		case <-tick.C:
 			if len(msgs) > 0 {
-				m.debug("interval reached - flushing %d", len(msgs))
+				m.debugf("interval reached - flushing %d", len(msgs))
 				m.sendAsync(msgs)
 				msgs = make([]interface{}, 0, m.BatchSize)
 			} else {
@@ -326,10 +363,10 @@ func (m *Metering) loop() {
 			tick.Stop()
 			//flush the queue
 			for msg := range m.msgs {
-				m.debug("queue: (%d/%d) %v", len(msgs), m.BatchSize, msg)
+				m.debugf("queue: (%d/%d) %v", len(msgs), m.BatchSize, msg)
 				msgs = append(msgs, msg)
 			}
-			m.debug("Flushing %d messages", len(msgs))
+			m.debugf("Flushing %d messages", len(msgs))
 			m.sendAsync(msgs)
 			//wait for all messages to be sent to the API
 			m.wg.Wait()
@@ -346,7 +383,7 @@ func (m *Metering) sendHttpRequest(apiName string, url string, httpMethod string
 	signature := fmt.Sprintf("sendHttpRequest(%s, %s)", apiName, httpMethod)
 
 	if httpMethod != "GET" {
-		m.log("%s API Payload %s", signature, string(payload))
+		m.logf("%s API Payload %s", signature, string(payload))
 	}
 	req, err := http.NewRequest(httpMethod, url, bytes.NewReader(payload))
 	if err != nil {
@@ -364,7 +401,7 @@ func (m *Metering) sendHttpRequest(apiName string, url string, httpMethod string
 
 	body, err := ioutil.ReadAll(res.Body)
 	if res.StatusCode < 400 {
-		m.debug("%s API response: %s %s", signature, res.Status, string(body))
+		m.debugf("%s API response: %s %s", signature, res.Status, string(body))
 		return body, nil
 	}
 
@@ -381,8 +418,18 @@ func (m *Metering) debug(args ...interface{}) {
 	}
 }
 
+func (m *Metering) debugf(format string, args ...interface{}) {
+	if m.Debug {
+		m.Logger.Logf(format, args...)
+	}
+}
+
 func (m *Metering) log(args ...interface{}) {
 	m.Logger.Log(args...)
+}
+
+func (m *Metering) logf(format string, args ...interface{}) {
+	m.Logger.Logf(format, args...)
 }
 
 func (m *Message) setTimestamp(s string) {
