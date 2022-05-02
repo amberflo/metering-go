@@ -75,10 +75,10 @@ func main() {
 ```
 
 ### Cancel an ingested meter
-A meter can be cancelled by resending the same ingestion event and setting ```aflo.cancel_previous_resource_event``` dimension to "true".
+A meter can be cancelled by resending the same ingestion event and setting ```metering.CancelMeter``` dimension to "true".
 
 ```go
-	dimensions["aflo.cancel_previous_resource_event"] = "true"	
+	dimensions["metering.CancelMeter"] = "true"	
 
 	//cancel an ingested meter
 	meteringError := Metering.Meter(&metering.MeterMessage{
@@ -198,10 +198,10 @@ func main() {
 		traits["customerType"] = "Tech"
 
 		//In case createCustomerInStripe is false, set the trait for stripeId
-		//traits[metering.STRIPE_TRAIT_KEY] = "cus_LVxxpBQvyN3V49"
+		//traits[metering.StripeTraitKey] = "cus_LVxxpBQvyN3V49"
 
 		//Set the AWS marketplace ID trait
-		//traits[metering.AWS_MARKETPLACE_TRAIT_KEY] = "aws_marketplace_id"
+		//traits[metering.AwsMarketPlaceTraitKey] = "aws_marketplace_id"
 
 		customer = &metering.Customer{
 			CustomerId:    customerId,
@@ -217,7 +217,7 @@ func main() {
 		fmt.Println("Error creating customer details: ", err)
 	}
 
-	customerStatus := fmt.Sprintf("Stripe id for customer: %s", customer.Traits[metering.STRIPE_TRAIT_KEY])
+	customerStatus := fmt.Sprintf("Stripe id for customer: %s", customer.Traits[metering.StripeTraitKey])
 	fmt.Println(customerStatus)
 }
 ```
