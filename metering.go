@@ -18,11 +18,12 @@ import (
 )
 
 const (
-	Endpoint                  = "https://app.amberflo.io"
-	RETRY_COUNT               = 5
-	BATCH_SIZE                = 100
-	AWS_MARKETPLACE_TRAIT_KEY = "awsm.customerIdentifier"
-	STRIPE_TRAIT_KEY          = "stripeId"
+	Endpoint               = "https://app.amberflo.io"
+	RetryCount             = 5
+	BatchSize              = 100
+	AwsMarketPlaceTraitKey = "awsm.customerIdentifier"
+	StripeTraitKey         = "stripeId"
+	CancelMeter            = "aflo.cancel_previous_resource_event"
 )
 
 var Backo = backo.DefaultBacko()
@@ -120,11 +121,11 @@ func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	m := &Metering{
 		Endpoint:        Endpoint,
 		IntervalSeconds: 1 * time.Second,
-		BatchSize:       BATCH_SIZE,
+		BatchSize:       BatchSize,
 		Debug:           false,
 		Client:          *http.DefaultClient,
 		ApiKey:          apiKey,
-		msgs:            make(chan interface{}, BATCH_SIZE),
+		msgs:            make(chan interface{}, BatchSize),
 		quit:            make(chan struct{}),
 		shutdown:        make(chan struct{}),
 		now:             time.Now,
@@ -298,7 +299,7 @@ func (m *Metering) send(msgs []interface{}) error {
 	}
 
 	//retry attempts to call Ingest API
-	for i := 0; i < RETRY_COUNT; i++ {
+	for i := 0; i < RetryCount; i++ {
 		if i > 0 {
 			m.logf("Ingest Api call retry attempt: %d", i)
 		}
@@ -330,7 +331,7 @@ func (m *Metering) loop() {
 	var msgs []interface{}
 	tick := time.NewTicker(m.IntervalSeconds)
 	m.log("Listener thread and timer have started")
-	m.logf("loop() ==> Effective batch size %d interval in seconds %d retry attempts %d", m.BatchSize, m.IntervalSeconds, RETRY_COUNT)
+	m.logf("loop() ==> Effective batch size %d interval in seconds %d retry attempts %d", m.BatchSize, m.IntervalSeconds, RetryCount)
 
 	for {
 		//select to wait on multiple communication operations
