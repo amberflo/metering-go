@@ -78,7 +78,7 @@ func main() {
 A meter can be cancelled by resending the same ingestion event and setting ```metering.CancelMeter``` dimension to "true".
 
 ```go
-	dimensions["metering.CancelMeter"] = "true"	
+	dimensions[metering.CancelMeter] = "true"	
 
 	//cancel an ingested meter
 	meteringError := Metering.Meter(&metering.MeterMessage{
