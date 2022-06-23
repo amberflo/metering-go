@@ -285,3 +285,74 @@ func main() {
 	)
 }
 ```
+
+
+## Sample Usage Cost SDK code 
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/amberflo/metering-go"
+)
+
+func main() {
+	//obtain your Amberflo API Key
+	apiKey := "my-api-key"
+
+	customerId := "dell-8"
+
+	//initialize the usage cost client
+	usageCostClient := metering.NewUsageCostClient(apiKey)
+
+	takeForCost := &metering.Take{
+		Limit:       10,
+		IsAscending: false,
+	}
+
+	// Example 1: group by customers
+	// setup usage cost query params
+	// visit following link for description of payload:
+	// https://docs.amberflo.io/reference/post_payments-cost-usage-cost
+	usageCostResult, err := usageCostClient.GetUsageCost(&metering.UsageCostsKey{
+		TimeGroupingInterval: metering.Day,
+		GroupBy:              []string{"product_plan_id"},
+		TimeRange:            timeRange,
+		Take:                 takeForCost,
+	})
+	fmt.Println("Usage Cost Result")
+	printUsageCostData(*usageCostResult, err)
+
+	//Example 2: filter for a cost for specific customer
+	//setup usage query params
+	filterForCost := make(map[string][]string)
+	filterForCost["customerId"] = []string{customerId}
+
+	usageCostResult, err = usageCostClient.GetUsageCost(&metering.UsageCostsKey{
+		TimeGroupingInterval: metering.Day,
+		GroupBy:              []string{"product_plan_id"},
+		TimeRange:            timeRange,
+		Take:                 takeForCost,
+		Filters:              filterForCost,
+	})
+	fmt.Println("Usage cost for specific customer")
+	printUsageCostData(*usageCostResult, err)
+}
+
+func printUsageCostData(usageCostResult metering.UsageCosts, err error) {
+	if err != nil {
+		fmt.Println("Usage cost error: ", err)
+		return
+	}
+
+	jsonString, err := json.MarshalIndent(usageCostResult, "", "  ")
+	if err != nil {
+		fmt.Println("Usage cost error: ", err)
+		return
+	}
+
+	fmt.Println(string(jsonString))
+}
+```
