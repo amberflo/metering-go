@@ -1,11 +1,15 @@
 # Metering GO Client
 
 ## Download Client
-In your GO code project directory, download package 
+
+In your GO code project directory, download package
+
 ```sh
 go get github.com/amberflo/metering-go
 ```
-## Sample ingestion code 
+
+## Sample ingestion code
+
 ```go
 package main
 
@@ -49,8 +53,8 @@ func main() {
 		//Queue meter messages for ingestion.
 		//Queue will be flushed asyncrhonously when Metering.BatchSize is exceeded
 		//or periodically at Metering.IntervalSeconds
-		
-		//unique ID is optional, but setting it 
+
+		//unique ID is optional, but setting it
 		//helps with de-dupe and revoking an ingested meter
 		uniqueId := uuid.NewRandom().String()
 		meteringError := Metering.Meter(&metering.MeterMessage{
@@ -68,17 +72,18 @@ func main() {
 	}
 
 	//Perform graceful shutdown
-	//Flush all messages in the queue, stop the timer, 
+	//Flush all messages in the queue, stop the timer,
 	//close all channels, and shutdown the client
 	Metering.Shutdown()
 }
 ```
 
 ### Cancel an ingested meter
-A meter can be cancelled by resending the same ingestion event and setting ```metering.CancelMeter``` dimension to "true".
+
+A meter can be cancelled by resending the same ingestion event and setting `metering.CancelMeter` dimension to "true".
 
 ```go
-	dimensions[metering.CancelMeter] = "true"	
+	dimensions[metering.CancelMeter] = "true"
 
 	//cancel an ingested meter
 	meteringError := Metering.Meter(&metering.MeterMessage{
@@ -91,7 +96,8 @@ A meter can be cancelled by resending the same ingestion event and setting ```me
 	})
 ```
 
-## Sample Usage SDK code 
+## Sample Usage SDK code
+
 ```go
 package main
 
@@ -110,6 +116,18 @@ func main() {
 
 	//initialize the usage client
 	UsageClient := metering.NewUsageClient(apiKey)
+
+	//set the start time of the time range in Epoch seconds
+	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (24 * 60 * 60)
+	timeRange := &metering.TimeRange{
+		StartTimeInSeconds: startTimeInSeconds,
+	}
+
+	//specify the limit and sort order
+	take := &metering.Take{
+		Limit:       10,
+		IsAscending: true,
+	}
 
 	// Example 1: group by customers for a specific meter and all customers
 	// setup usage query params
@@ -158,7 +176,8 @@ func printUsageData(usageResult metering.DetailedMeterAggregation, err error) {
 }
 ```
 
-## Sample to setup a customer 
+## Sample to setup a customer
+
 ```go
 package main
 
@@ -172,7 +191,7 @@ func main() {
 	//obtain your Amberflo API Key
 	apiKey := "my-api-key"
 	customerId := "dell-8"
-	//Automatically create customer in Stripe 
+	//Automatically create customer in Stripe
   	//and add stripeId to traits
 	createCustomerInStripe := true
 
@@ -223,9 +242,11 @@ func main() {
 ```
 
 ## Sample metering with Custom Logger using zerlog
-By default, metering-go uses the default GO logger. 
 
-You can inject your own logger by implementing the following interface ```metering.Logger```:
+By default, metering-go uses the default GO logger.
+
+You can inject your own logger by implementing the following interface `metering.Logger`:
+
 ```go
 type Logger interface {
 	Log(v ...interface{})
@@ -233,7 +254,8 @@ type Logger interface {
 }
 ```
 
-Define the custom logger: 
+Define the custom logger:
+
 ```go
 package main
 
@@ -266,6 +288,7 @@ func (l *CustomLogger) Logf(format string, args ...interface{}) {
 ```
 
 Instantiate metering client with custom logger:
+
 ```go
 package main
 
@@ -275,7 +298,7 @@ import (
 
 func main() {
 	//obtain your Amberflo API Key
-	apiKey := "my-api-key"	
+	apiKey := "my-api-key"
 	customerLogger := NewCustomLogger()
 
 	//Instantiate a new metering client with custom logger
@@ -286,8 +309,8 @@ func main() {
 }
 ```
 
+## Sample Usage Cost SDK code
 
-## Sample Usage Cost SDK code 
 ```go
 package main
 
@@ -307,6 +330,13 @@ func main() {
 	//initialize the usage cost client
 	usageCostClient := metering.NewUsageCostClient(apiKey)
 
+	//set the start time of the time range in Epoch seconds
+	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (24 * 60 * 60)
+	timeRange := &metering.TimeRange{
+		StartTimeInSeconds: startTimeInSeconds,
+	}
+
+	//specify the limit and sort order
 	takeForCost := &metering.Take{
 		Limit:       10,
 		IsAscending: false,
