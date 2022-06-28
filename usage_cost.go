@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
+	"reflect"
 )
 
 type UsageCostsKey struct {
@@ -41,19 +40,21 @@ type UsageCosts struct {
 }
 
 type UsageCostClient struct {
-	ApiKey string
-	Client http.Client
-	Logger *log.Logger
+	ApiKey    string
+	Client    http.Client
+	Logger    Logger
+	UsageBase UsageBase
 }
 
-func NewUsageCostClient(apiKey string) *UsageCostClient {
+func NewUsageCostClient(apiKey string, opts ...UsageOption) *UsageCostClient {
 	uc := &UsageCostClient{
 		ApiKey: apiKey,
 		Client: *http.DefaultClient,
-		Logger: log.New(os.Stderr, "amberflo.io ", log.LstdFlags),
 	}
 
-	uc.log("Instantiating amberflo.io Usage Cost client")
+	uc.Logger = uc.UsageBase.GetLoggerInstance(opts...)
+	uc.logf("instantiated the logger of type: %s", reflect.TypeOf(uc.Logger))
+	uc.logf("Instantiating amberflo.io Usage Cost client")
 
 	return uc
 }
@@ -66,7 +67,7 @@ func (uc *UsageCostClient) GetUsageCostAsJson(payload *UsageCostsKey) (*string, 
 		return nil, fmt.Errorf("error marshalling payload: %s", err)
 	}
 
-	uc.log("Usage cost payload %s", string(b))
+	uc.logf("Usage cost payload %s", string(b))
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
 	if err != nil {
@@ -82,16 +83,16 @@ func (uc *UsageCostClient) GetUsageCostAsJson(payload *UsageCostsKey) (*string, 
 	//finally
 	defer res.Body.Close()
 
-	uc.log("Usage Cost API response: %s", res.Status)
+	uc.logf("Usage Cost API response: %s", res.Status)
 
 	body, err := ioutil.ReadAll(res.Body)
 
 	if err != nil {
-		uc.log("Usage API error: %s %s", res.Status, err)
+		uc.logf("Usage API error: %s %s", res.Status, err)
 		return nil, fmt.Errorf("error reading response body: %s", err)
 	}
 	if res.StatusCode >= 400 {
-		uc.log("Usage Cost API response not OK: %d %s", res.StatusCode, string(body))
+		uc.logf("Usage Cost API response not OK: %d %s", res.StatusCode, string(body))
 		return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
 	}
 
@@ -106,7 +107,7 @@ func (uc *UsageCostClient) GetUsageCost(payload *UsageCostsKey) (*UsageCosts, er
 	usageCostResult, err := uc.GetUsageCostAsJson(payload)
 
 	if err != nil {
-		uc.log("Usage Cost API error: %s", err)
+		uc.logf("Usage Cost API error: %s", err)
 		return nil, fmt.Errorf("error reading response body: %s", err)
 	}
 
@@ -115,6 +116,6 @@ func (uc *UsageCostClient) GetUsageCost(payload *UsageCostsKey) (*UsageCosts, er
 	return &result, nil
 }
 
-func (uc *UsageCostClient) log(msg string, args ...interface{}) {
-	uc.Logger.Printf(msg, args...)
+func (uc *UsageCostClient) logf(msg string, args ...interface{}) {
+	uc.Logger.Logf(msg, args...)
 }

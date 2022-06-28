@@ -306,6 +306,18 @@ func main() {
 		apiKey,
 		metering.WithLogger(customerLogger),
 	)
+
+	//initialize the usage client with custom logger
+	UsageClient := metering.NewUsageClient(
+		apiKey,
+		metering.WithUsageLogger(customerLogger),
+	)
+
+	//initialize the usage cost client with custom logger
+	usageCostClient := metering.NewUsageCostClient(
+		apiKey,
+		metering.WithUsageLogger(customerLogger),
+	)
 }
 ```
 

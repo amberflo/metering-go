@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
+	"reflect"
 )
 
 type AggregationType string
@@ -61,19 +60,21 @@ type DetailedMeterAggregation struct {
 }
 
 type UsageClient struct {
-	ApiKey string
-	Client http.Client
-	Logger *log.Logger
+	ApiKey    string
+	Client    http.Client
+	Logger    Logger
+	UsageBase UsageBase
 }
 
-func NewUsageClient(apiKey string) *UsageClient {
+func NewUsageClient(apiKey string, opts ...UsageOption) *UsageClient {
 	u := &UsageClient{
 		ApiKey: apiKey,
 		Client: *http.DefaultClient,
-		Logger: log.New(os.Stderr, "amberflo.io ", log.LstdFlags),
 	}
 
-	u.log("Instantiating amberflo.io Usage client")
+	u.Logger = u.UsageBase.GetLoggerInstance(opts...)
+	u.logf("instantiated the logger of type: %s", reflect.TypeOf(u.Logger))
+	u.logf("Instantiating amberflo.io Usage client")
 
 	return u
 }
@@ -86,7 +87,7 @@ func (u *UsageClient) GetUsageAsJson(payload *UsagePayload) (*string, error) {
 		return nil, fmt.Errorf("error marshalling payload: %s", err)
 	}
 
-	u.log("Usage Payload %s", string(b))
+	u.logf("Usage Payload %s", string(b))
 
 	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
 	if err != nil {
@@ -102,16 +103,16 @@ func (u *UsageClient) GetUsageAsJson(payload *UsagePayload) (*string, error) {
 	//finally
 	defer res.Body.Close()
 
-	u.log("Usage API response: %s", res.Status)
+	u.logf("Usage API response: %s", res.Status)
 
 	body, err := ioutil.ReadAll(res.Body)
 
 	if err != nil {
-		u.log("Usage API error: %s %s", res.Status, err)
+		u.logf("Usage API error: %s %s", res.Status, err)
 		return nil, fmt.Errorf("error reading response body: %s", err)
 	}
 	if res.StatusCode >= 400 {
-		u.log("Usage API response not OK: %d %s", res.StatusCode, string(body))
+		u.logf("Usage API response not OK: %d %s", res.StatusCode, string(body))
 		return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
 	}
 
@@ -131,7 +132,7 @@ func (u *UsageClient) GetUsage(payload *UsagePayload) (*DetailedMeterAggregation
 	usageResult, err := u.GetUsageAsJson(payload)
 
 	if err != nil {
-		u.log("Usage API error: %s", err)
+		u.logf("Usage API error: %s", err)
 		return nil, fmt.Errorf("error reading response body: %s", err)
 	}
 
@@ -141,6 +142,6 @@ func (u *UsageClient) GetUsage(payload *UsagePayload) (*DetailedMeterAggregation
 	return &result, nil
 }
 
-func (u *UsageClient) log(msg string, args ...interface{}) {
-	u.Logger.Printf(msg, args...)
+func (uc *UsageClient) logf(msg string, args ...interface{}) {
+	uc.Logger.Logf(msg, args...)
 }
