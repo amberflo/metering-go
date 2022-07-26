@@ -354,7 +354,7 @@ func main() {
 		IsAscending: false,
 	}
 
-	// Example 1: group by customers
+	// Example 1: group by product plan
 	// setup usage cost query params
 	// visit following link for description of payload:
 	// https://docs.amberflo.io/reference/post_payments-cost-usage-cost
@@ -381,6 +381,85 @@ func main() {
 	})
 	fmt.Println("Usage cost for specific customer")
 	printUsageCostData(*usageCostResult, err)
+}
+
+func printUsageCostData(usageCostResult metering.UsageCosts, err error) {
+	if err != nil {
+		fmt.Println("Usage cost error: ", err)
+		return
+	}
+
+	jsonString, err := json.MarshalIndent(usageCostResult, "", "  ")
+	if err != nil {
+		fmt.Println("Usage cost error: ", err)
+		return
+	}
+
+	fmt.Println(string(jsonString))
+}
+```
+
+## Sample Usage Cost SDK with paging code
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/amberflo/metering-go"
+)
+
+func main() {
+	//obtain your Amberflo API Key
+	apiKey := "my-api-key"
+
+	customerId := "dell-8"
+
+	//initialize the usage cost client
+	usageCostClient := metering.NewUsageCostClient(apiKey)
+
+	//set the start time of the time range in Epoch seconds
+	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (24 * 60 * 60)
+	timeRange := &metering.TimeRange{
+		StartTimeInSeconds: startTimeInSeconds,
+	}
+
+	// paging
+	pageIndex := int64(1)
+	page := &metering.Page{
+		Number: pageIndex,
+		Size:   2,
+	}
+
+	// Example 1: group by product plan
+	// setup usage cost query params
+	// visit following link for description of payload:
+	// https://docs.amberflo.io/reference/post_payments-cost-usage-cost
+	for pageIndex < 5 {
+		usageCostResultForPage, err := usageCostClient.GetUsageCost(&metering.UsageCostsKey{
+			TimeGroupingInterval: metering.Day,
+			GroupBy:              []string{"product_plan_id"},
+			TimeRange:            timeRange,
+			Page:                 page,
+		})
+
+		fmt.Println("Usage Cost Result for page: ", pageIndex)
+		printUsageCostData(*usageCostResultForPage, err)
+
+		//increment the page number
+		pageIndex = pageIndex + 1
+		//obtain total pages from result and stop if limit reached
+		if usageCostResultForPage.PageInfo.TotalPages < pageIndex {
+			break
+		}
+
+		page.Number = pageIndex
+		//a token from a previous query page result to track pages and improve performance
+		pageToken := usageCostResultForPage.PageInfo.PageToken
+		page.Token = pageToken
+	}
 }
 
 func printUsageCostData(usageCostResult metering.UsageCosts, err error) {

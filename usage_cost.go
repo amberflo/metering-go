@@ -16,6 +16,7 @@ type UsageCostsKey struct {
 	Filters              map[string][]string `json:"filters,omitempty"`
 	GroupBy              []string            `json:"groupBy,omitempty"`
 	Take                 *Take               `json:"take,omitempty"`
+	Page                 *Page               `json:"page,omitempty"`
 }
 
 type UsageGroupCostValue struct {
@@ -37,6 +38,7 @@ type UsageCosts struct {
 	Key                        *UsageCostsKey    `json:"key,omitempty"`
 	SecondsSinceEpochIntervals []int64           `json:"secondsSinceEpochIntervals,omitempty"`
 	CostList                   []UsageGroupCosts `json:"costList,omitempty"`
+	PageInfo                   *PageInfo         `json:"pageInfo,omitempty"`
 }
 
 type UsageCostClient struct {

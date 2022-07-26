@@ -19,6 +19,20 @@ type TimeRange struct {
 	EndTimeInSeconds   int64 `json:"endTimeInSeconds,omitempty"`
 }
 
+type Page struct {
+	Number int64  `json:"number"`
+	Size   int64  `json:"size"`
+	Token  string `json:"token,omitempty"`
+}
+
+type PageInfo struct {
+	PageNumber   int64  `json:"pageNumber"`
+	PageSize     int64  `json:"pageSize"`
+	PageToken    string `json:"pageToken"`
+	TotalPages   int64  `json:"totalPages"`
+	TotalResults int64  `json:"totalResults"`
+}
+
 type UsageBase struct {
 	Logger Logger
 }
