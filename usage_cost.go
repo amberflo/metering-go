@@ -1,10 +1,8 @@
 package metering
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 )
@@ -42,10 +40,11 @@ type UsageCosts struct {
 }
 
 type UsageCostClient struct {
-	ApiKey    string
-	Client    http.Client
-	Logger    Logger
-	UsageBase UsageBase
+	ApiKey             string
+	Client             http.Client
+	Logger             Logger
+	UsageBase          UsageBase
+	AmberfloHttpClient AmberfloHttpClient
 }
 
 func NewUsageCostClient(apiKey string, opts ...UsageOption) *UsageCostClient {
@@ -57,6 +56,9 @@ func NewUsageCostClient(apiKey string, opts ...UsageOption) *UsageCostClient {
 	uc.Logger = uc.UsageBase.GetLoggerInstance(opts...)
 	uc.logf("instantiated the logger of type: %s", reflect.TypeOf(uc.Logger))
 	uc.logf("Instantiating amberflo.io Usage Cost client")
+
+	amberfloHttpClient := NewAmberfloHttpClient(apiKey, uc.Logger, uc.Client)
+	uc.AmberfloHttpClient = *amberfloHttpClient
 
 	return uc
 }
@@ -70,32 +72,11 @@ func (uc *UsageCostClient) GetUsageCostAsJson(payload *UsageCostsKey) (*string, 
 	}
 
 	uc.logf("Usage cost payload %s", string(b))
-
-	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
+	apiName := "Usage Cost"
+	body, err := uc.AmberfloHttpClient.sendHttpRequest(apiName, url, "POST", b)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %s", err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-API-KEY", uc.ApiKey)
-
-	res, err := uc.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error sending request: %s", err)
-	}
-	//finally
-	defer res.Body.Close()
-
-	uc.logf("Usage Cost API response: %s", res.Status)
-
-	body, err := ioutil.ReadAll(res.Body)
-
-	if err != nil {
-		uc.logf("Usage API error: %s %s", res.Status, err)
-		return nil, fmt.Errorf("error reading response body: %s", err)
-	}
-	if res.StatusCode >= 400 {
-		uc.logf("Usage Cost API response not OK: %d %s", res.StatusCode, string(body))
-		return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
+		uc.logf("API error: %s", err)
+		return nil, fmt.Errorf("API error: %s", err)
 	}
 
 	v := string(body)

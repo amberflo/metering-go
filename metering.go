@@ -2,11 +2,9 @@ package metering
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"sync"
 
-	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -92,12 +90,13 @@ func WithLogger(logger Logger) MeteringOption {
 type Metering struct {
 	Endpoint string
 	// IntervalSeconds is the frequency at which messages are flushed.
-	IntervalSeconds time.Duration
-	BatchSize       int
-	Logger          Logger
-	Debug           bool
-	Client          http.Client
-	ApiKey          string
+	IntervalSeconds    time.Duration
+	BatchSize          int
+	Logger             Logger
+	Debug              bool
+	Client             http.Client
+	ApiKey             string
+	AmberfloHttpClient AmberfloHttpClient
 
 	// channels
 	msgs     chan interface{}
@@ -142,6 +141,9 @@ func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 		m.log("instantiated the default logger")
 	}
 
+	amberfloHttpClient := NewAmberfloHttpClient(apiKey, m.Logger, m.Client)
+	m.AmberfloHttpClient = *amberfloHttpClient
+
 	m.log("instantiating amberflo.io metering client")
 	m.upcond.L = &m.mutex
 	return m
@@ -165,7 +167,7 @@ func (m *Metering) GetCustomer(customerId string) (*Customer, error) {
 	signature := fmt.Sprintf("GetCustomer(%s)", customerId)
 	var customer *Customer
 	urlGet := fmt.Sprintf("%s/customers/?customerId=%s", m.Endpoint, customerId)
-	data, err := m.sendHttpRequest("Customers", urlGet, "GET", nil)
+	data, err := m.AmberfloHttpClient.sendHttpRequest("Customers", urlGet, "GET", nil)
 	if err != nil {
 		return nil, fmt.Errorf("error sending request: %s", err)
 	}
@@ -198,7 +200,7 @@ func (m *Metering) sendCustomerToApi(payload *Customer, createInStripe bool) (*C
 		httpMethod = "POST"
 		url = fmt.Sprintf("%s/customers?autoCreateCustomerInStripe=%t", m.Endpoint, createInStripe)
 	}
-	b, err = m.sendHttpRequest("customers", url, httpMethod, b)
+	b, err = m.AmberfloHttpClient.sendHttpRequest("customers", url, httpMethod, b)
 	if err != nil {
 		return nil, fmt.Errorf("%s error making %s http call: %s", signature, httpMethod, err)
 	}
@@ -317,7 +319,7 @@ func (m *Metering) send(msgs []interface{}) error {
 func (m *Metering) ingestToApi(b []byte) error {
 	m.logf("Ingest API Payload %s", string(b))
 	url := m.Endpoint + "/ingest"
-	_, err := m.sendHttpRequest("Ingest Api", url, "POST", b)
+	_, err := m.AmberfloHttpClient.sendHttpRequest("Ingest Api", url, "POST", b)
 
 	if err != nil {
 		return fmt.Errorf("ingestToApi()=>Error calling ingest API: %s", err)
@@ -377,40 +379,6 @@ func (m *Metering) loop() {
 			return
 		}
 	}
-}
-
-//http client to make REST call
-func (m *Metering) sendHttpRequest(apiName string, url string, httpMethod string, payload []byte) ([]byte, error) {
-	signature := fmt.Sprintf("sendHttpRequest(%s, %s)", apiName, httpMethod)
-
-	if httpMethod != "GET" {
-		m.logf("%s API Payload %s", signature, string(payload))
-	}
-	req, err := http.NewRequest(httpMethod, url, bytes.NewReader(payload))
-	if err != nil {
-		return nil, fmt.Errorf("%s error creating request: %s", signature, err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-API-KEY", m.ApiKey)
-
-	res, err := m.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error sending request: %s", err)
-	}
-	//finally
-	defer res.Body.Close()
-
-	body, err := ioutil.ReadAll(res.Body)
-	if res.StatusCode < 400 {
-		m.debugf("%s API response: %s %s", signature, res.Status, string(body))
-		return body, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %s", err)
-	}
-
-	return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
 }
 
 func (m *Metering) debug(args ...interface{}) {

@@ -1,10 +1,8 @@
 package metering
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 )
@@ -60,10 +58,11 @@ type DetailedMeterAggregation struct {
 }
 
 type UsageClient struct {
-	ApiKey    string
-	Client    http.Client
-	Logger    Logger
-	UsageBase UsageBase
+	ApiKey             string
+	Client             http.Client
+	Logger             Logger
+	UsageBase          UsageBase
+	AmberfloHttpClient AmberfloHttpClient
 }
 
 func NewUsageClient(apiKey string, opts ...UsageOption) *UsageClient {
@@ -75,6 +74,9 @@ func NewUsageClient(apiKey string, opts ...UsageOption) *UsageClient {
 	u.Logger = u.UsageBase.GetLoggerInstance(opts...)
 	u.logf("instantiated the logger of type: %s", reflect.TypeOf(u.Logger))
 	u.logf("Instantiating amberflo.io Usage client")
+
+	amberfloHttpClient := NewAmberfloHttpClient(apiKey, u.Logger, u.Client)
+	u.AmberfloHttpClient = *amberfloHttpClient
 
 	return u
 }
@@ -88,41 +90,12 @@ func (u *UsageClient) GetUsageAsJson(payload *UsagePayload) (*string, error) {
 	}
 
 	u.logf("Usage Payload %s", string(b))
-
-	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
+	apiName := "Usage"
+	body, err := u.AmberfloHttpClient.sendHttpRequest(apiName, url, "POST", b)
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %s", err)
+		u.logf("API error: %s", err)
+		return nil, fmt.Errorf("API error: %s", err)
 	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-API-KEY", u.ApiKey)
-
-	res, err := u.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error sending request: %s", err)
-	}
-	//finally
-	defer res.Body.Close()
-
-	u.logf("Usage API response: %s", res.Status)
-
-	body, err := ioutil.ReadAll(res.Body)
-
-	if err != nil {
-		u.logf("Usage API error: %s %s", res.Status, err)
-		return nil, fmt.Errorf("error reading response body: %s", err)
-	}
-	if res.StatusCode >= 400 {
-		u.logf("Usage API response not OK: %d %s", res.StatusCode, string(body))
-		return nil, fmt.Errorf("response %s: %d – %s", res.Status, res.StatusCode, string(body))
-	}
-
-	//In case we need to return map
-	// var jsonBody interface{}
-	// err = json.Unmarshal(body, &jsonBody)
-	// if err != nil {
-	// 	u.log("Usage API error: Error decoding the response body")
-	// 	return nil, fmt.Errorf("error decoding the response body")
-	// }
 
 	v := string(body)
 	return &v, nil
