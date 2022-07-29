@@ -477,3 +477,37 @@ func printUsageCostData(usageCostResult metering.UsageCosts, err error) {
 	fmt.Println(string(jsonString))
 }
 ```
+
+## Sample to assign a pricing plan to a customer
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/amberflo/metering-go"
+)
+
+func main() {
+	//obtain your Amberflo API Key
+	apiKey := "my-api-key"
+	customerId := "dell-8"
+
+	//Assign pricing plan to customer
+	productPlanId := "8e880691-1ae8-493b-b0a7-12a71e5dfcca"
+	customerPricingClient := metering.NewCustomerPricingPlanClient(apiKey)
+	customerPricingPlan, err := customerPricingClient.AddOrUpdate(&metering.CustomerProductPlan{
+		ProductPlanId:      productPlanId,
+		CustomerId:         customerId,
+		StartTimeInSeconds: (time.Now().UnixNano() / int64(time.Second)),
+	})
+
+	if err != nil {
+		fmt.Println("Error assigning customer plan: ", err)
+	}
+	pricingStatus := fmt.Sprintf("Customer pricing plan %s assigned to customer %s", customerPricingPlan.ProductPlanId, customerId)
+	fmt.Println(pricingStatus)
+}
+```
+
