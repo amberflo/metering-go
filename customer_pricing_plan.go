@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"reflect"
 )
+
+type CustomerPricingPlanClient struct {
+	BaseClient
+}
 
 type CustomerProductPlan struct {
 	ProductId          string `json:"productId"`
@@ -16,41 +18,10 @@ type CustomerProductPlan struct {
 	EndTimeInSeconds   int64  `json:"endTimeInSeconds,omitempty"`
 }
 
-type CustomerPricingPlanClient struct {
-	ApiKey             string
-	Client             http.Client
-	Logger             Logger
-	AmberfloHttpClient AmberfloHttpClient
-}
-
-type CustomerPricingOption func(*CustomerPricingPlanClient)
-
-func WithCustomerPricingLogger(logger Logger) CustomerPricingOption {
-	return func(cpc *CustomerPricingPlanClient) {
-		cpc.Logger = logger
-	}
-}
-
-func NewCustomerPricingPlanClient(apiKey string, opts ...CustomerPricingOption) *CustomerPricingPlanClient {
-	cpc := &CustomerPricingPlanClient{
-		ApiKey: apiKey,
-		Client: *http.DefaultClient,
-	}
-
-	for _, opt := range opts {
-		opt(cpc)
-	}
-
-	if cpc.Logger == nil {
-		cpc.Logger = NewAmberfloDefaultLogger()
-	}
-
-	cpc.logf("instantiated the logger of type: %s", reflect.TypeOf(cpc.Logger))
-	cpc.logf("Instantiating amberflo.io Customer Pricing Plan client")
-
-	amberfloHttpClient := NewAmberfloHttpClient(apiKey, cpc.Logger, cpc.Client)
-	cpc.AmberfloHttpClient = *amberfloHttpClient
-
+func NewCustomerPricingPlanClient(apiKey string, opts ...ClientOption) *CustomerPricingPlanClient {
+	bc := NewBaseClient(apiKey, opts...)
+	cpc := &CustomerPricingPlanClient{BaseClient: *bc}
+	cpc.logf("Instantiating amberflo.io Customer Pricing Plan Client")
 	return cpc
 }
 
@@ -82,8 +53,4 @@ func (cpc *CustomerPricingPlanClient) AddOrUpdate(payload *CustomerProductPlan) 
 	var result CustomerProductPlan
 	json.Unmarshal([]byte(v), &result)
 	return &result, nil
-}
-
-func (uc *CustomerPricingPlanClient) logf(msg string, args ...interface{}) {
-	uc.Logger.Logf(msg, args...)
 }

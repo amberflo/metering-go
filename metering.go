@@ -49,16 +49,6 @@ type MeterMessage struct {
 	Message
 }
 
-type Customer struct {
-	CustomerId    string            `json:"customerId"`
-	CustomerName  string            `json:"customerName"`
-	CustomerEmail string            `json:"customerEmail"`
-	Traits        map[string]string `json:"traits,omitempty"`
-	Enabled       bool              `json:"enabled,omitempty"`
-	UpdateTime    int64             `json:"updateTime,omitempty"`
-	CreateTime    int64             `json:"createTime,omitempty"`
-}
-
 type MeteringOption func(*Metering)
 
 func WithDebug(debug bool) MeteringOption {
@@ -147,72 +137,6 @@ func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	m.log("instantiating amberflo.io metering client")
 	m.upcond.L = &m.mutex
 	return m
-}
-
-func (m *Metering) AddorUpdateCustomer(customer *Customer, createInStripe bool) (*Customer, error) {
-	if customer.CustomerId == "" || customer.CustomerName == "" {
-		return nil, errors.New("customer info 'CustomerId' and 'CustomerName' are required fields")
-	}
-
-	customer, err := m.sendCustomerToApi(customer, createInStripe)
-	if err != nil {
-		m.logf("Error adding or updating customer details: %s", err)
-		return nil, err
-	}
-
-	return customer, nil
-}
-
-func (m *Metering) GetCustomer(customerId string) (*Customer, error) {
-	signature := fmt.Sprintf("GetCustomer(%s)", customerId)
-	var customer *Customer
-	urlGet := fmt.Sprintf("%s/customers/?customerId=%s", m.Endpoint, customerId)
-	data, err := m.AmberfloHttpClient.sendHttpRequest("Customers", urlGet, "GET", nil)
-	if err != nil {
-		return nil, fmt.Errorf("error sending request: %s", err)
-	}
-	if data != nil && string(data) != "{}" {
-		err = json.Unmarshal(data, &customer)
-		if err != nil {
-			return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
-		}
-	}
-
-	return customer, nil
-}
-
-func (m *Metering) sendCustomerToApi(payload *Customer, createInStripe bool) (*Customer, error) {
-	signature := fmt.Sprintf("sendCustomerToApi(%v)", payload)
-
-	m.debugf("Checking if customer deatils exist %s", payload.CustomerId)
-	customer, _ := m.GetCustomer(payload.CustomerId)
-
-	b, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("%s error marshalling payload: %s", signature, err)
-	}
-
-	url := fmt.Sprintf("%s/customers", m.Endpoint)
-	httpMethod := ""
-	if customer != nil && customer.CustomerId == payload.CustomerId {
-		httpMethod = "PUT"
-	} else {
-		httpMethod = "POST"
-		url = fmt.Sprintf("%s/customers?autoCreateCustomerInStripe=%t", m.Endpoint, createInStripe)
-	}
-	b, err = m.AmberfloHttpClient.sendHttpRequest("customers", url, httpMethod, b)
-	if err != nil {
-		return nil, fmt.Errorf("%s error making %s http call: %s", signature, httpMethod, err)
-	}
-
-	if b != nil {
-		err = json.Unmarshal(b, &customer)
-		if err != nil {
-			return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
-		}
-	}
-
-	return customer, nil
 }
 
 //Queue a metering message to send to Ingest API. Messages are flushes periodically at IntervalSeconds or when the BatchSize limit is exceeded.

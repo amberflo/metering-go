@@ -3,9 +3,11 @@ package metering
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"reflect"
 )
+
+type UsageCostClient struct {
+	BaseClient
+}
 
 type UsageCostsKey struct {
 	ProductId            string              `json:"productId"`
@@ -44,27 +46,10 @@ type UsageCosts struct {
 	PageInfo                   *PageInfo         `json:"pageInfo,omitempty"`
 }
 
-type UsageCostClient struct {
-	ApiKey             string
-	Client             http.Client
-	Logger             Logger
-	UsageBase          UsageBase
-	AmberfloHttpClient AmberfloHttpClient
-}
-
-func NewUsageCostClient(apiKey string, opts ...UsageOption) *UsageCostClient {
-	uc := &UsageCostClient{
-		ApiKey: apiKey,
-		Client: *http.DefaultClient,
-	}
-
-	uc.Logger = uc.UsageBase.GetLoggerInstance(opts...)
-	uc.logf("instantiated the logger of type: %s", reflect.TypeOf(uc.Logger))
-	uc.logf("Instantiating amberflo.io Usage Cost client")
-
-	amberfloHttpClient := NewAmberfloHttpClient(apiKey, uc.Logger, uc.Client)
-	uc.AmberfloHttpClient = *amberfloHttpClient
-
+func NewUsageCostClient(apiKey string, opts ...ClientOption) *UsageCostClient {
+	bc := NewBaseClient(apiKey, opts...)
+	uc := &UsageCostClient{BaseClient: *bc}
+	uc.logf("Instantiating amberflo.io Usage Cost Client")
 	return uc
 }
 
@@ -102,8 +87,4 @@ func (uc *UsageCostClient) GetUsageCost(payload *UsageCostsKey) (*UsageCosts, er
 	var result UsageCosts
 	json.Unmarshal([]byte(*usageCostResult), &result)
 	return &result, nil
-}
-
-func (uc *UsageCostClient) logf(msg string, args ...interface{}) {
-	uc.Logger.Logf(msg, args...)
 }

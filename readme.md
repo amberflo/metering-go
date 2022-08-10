@@ -1,6 +1,6 @@
-# Metering GO Client
+# Amberflo Metering GO SDK
 
-## Download Client
+## Install SDK
 
 In your GO code project directory, download package
 
@@ -8,7 +8,13 @@ In your GO code project directory, download package
 go get github.com/amberflo/metering-go
 ```
 
-## Sample ingestion code
+## Ingesting meters
+[See API Reference](https://docs.amberflo.io/reference/post_ingest)  
+[Guide](https://docs.amberflo.io/docs/cloud-metering-service)
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 package main
@@ -21,10 +27,10 @@ import (
 	"github.com/xtgo/uuid"
 )
 
-func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
 
+func main() {
 	//Optional ingest options
 	//Frequency at which queued data will be sent to API. Default is 1 second.
 	intervalSeconds := 30 * time.Second
@@ -34,7 +40,7 @@ func main() {
 	debug := true
 
 	//Instantiate a new metering client
-	Metering := metering.NewMeteringClient(
+	meteringClient := metering.NewMeteringClient(
 		apiKey,
 		metering.WithBatchSize(batchSize),
 		metering.WithIntervalSeconds(intervalSeconds),
@@ -57,7 +63,7 @@ func main() {
 		//unique ID is optional, but setting it
 		//helps with de-dupe and revoking an ingested meter
 		uniqueId := uuid.NewRandom().String()
-		meteringError := Metering.Meter(&metering.MeterMessage{
+		meteringError := meteringClient.Meter(&metering.MeterMessage{
 			UniqueId:          uniqueId,
 			MeterApiName:      "ApiCalls-From-Go",
 			CustomerId:        customerId,
@@ -74,19 +80,24 @@ func main() {
 	//Perform graceful shutdown
 	//Flush all messages in the queue, stop the timer,
 	//close all channels, and shutdown the client
-	Metering.Shutdown()
+	meteringClient.Shutdown()
 }
 ```
+</details>
 
 ### Cancel an ingested meter
-
 A meter can be cancelled by resending the same ingestion event and setting `metering.CancelMeter` dimension to "true".
+
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 	dimensions[metering.CancelMeter] = "true"
 
 	//cancel an ingested meter
-	meteringError := Metering.Meter(&metering.MeterMessage{
+	meteringError := meteringClient.Meter(&metering.MeterMessage{
 		UniqueId:          uniqueId,
 		MeterApiName:      "ApiCalls-From-Go",
 		CustomerId:        customerId,
@@ -95,8 +106,14 @@ A meter can be cancelled by resending the same ingestion event and setting `mete
 		Dimensions:        dimensions,
 	})
 ```
+</details>
 
-## Sample Usage SDK code
+## Query usage
+[See API Reference](https://docs.amberflo.io/reference/post_usage)
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 package main
@@ -108,14 +125,17 @@ import (
 	"github.com/amberflo/metering-go"
 )
 
-func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
 
+func main() {
 	customerId := "dell-8"
 
 	//initialize the usage client
-	UsageClient := metering.NewUsageClient(apiKey)
+	usageClient := metering.NewUsageClient(
+		apiKey,
+		// metering.WithCustomLogger(customerLogger),
+	)
 
 	//set the start time of the time range in Epoch seconds
 	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (24 * 60 * 60)
@@ -133,7 +153,7 @@ func main() {
 	// setup usage query params
 	// visit following link for description of payload:
 	// https://amberflo.readme.io/reference#usage
-	usageResult, err := UsageClient.GetUsage(&metering.UsagePayload{
+	usageResult, err := usageClient.GetUsage(&metering.UsagePayload{
 		MeterApiName:         "ApiCalls-From-Go",
 		Aggregation:          metering.Sum,
 		TimeGroupingInterval: metering.Day,
@@ -148,7 +168,7 @@ func main() {
 	filter := make(map[string][]string)
 	filter["customerId"] = []string{customerId}
 
-	usageResult, err = UsageClient.GetUsage(&metering.UsagePayload{
+	usageResult, err = usageClient.GetUsage(&metering.UsagePayload{
 		MeterApiName:         "ApiCalls-From-Go",
 		Aggregation:          metering.Sum,
 		TimeGroupingInterval: metering.Day,
@@ -175,8 +195,14 @@ func printUsageData(usageResult metering.DetailedMeterAggregation, err error) {
 	fmt.Println(string(jsonString))
 }
 ```
+</details>
 
-## Sample to setup a customer
+## Manage customers
+[See API Reference](https://docs.amberflo.io/reference/post_customers)
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 package main
@@ -187,19 +213,23 @@ import (
 	"github.com/amberflo/metering-go"
 )
 
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
+
 func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
 	customerId := "dell-8"
 	//Automatically create customer in Stripe
   	//and add stripeId to traits
 	createCustomerInStripe := true
 
-	//Instantiate a new metering client
-	Metering := metering.NewMeteringClient(apiKey)
+	//initialize the customer client
+	customerClient := metering.NewCustomerClient(
+		apiKey,
+		//metering.WithCustomLogger(customerLogger),
+	)
 
 	//check if customer exists
-	customer, err := Metering.GetCustomer(customerId)
+	customer, err := customerClient.GetCustomer(customerId)
 	if err != nil {
 		fmt.Println("Error getting customer details: ", err)
 	}
@@ -231,7 +261,7 @@ func main() {
 		}
 	}
 
-	customer, err = Metering.AddorUpdateCustomer(customer, createCustomerInStripe)
+	customer, err = customerClient.AddorUpdateCustomer(customer, createCustomerInStripe)
 	if err != nil {
 		fmt.Println("Error creating customer details: ", err)
 	}
@@ -240,12 +270,18 @@ func main() {
 	fmt.Println(customerStatus)
 }
 ```
+</details>
 
-## Sample metering with Custom Logger using zerlog
+## Custom logger using zerolog
 
 By default, metering-go uses the default GO logger.
 
 You can inject your own logger by implementing the following interface `metering.Logger`:
+
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 type Logger interface {
@@ -286,8 +322,14 @@ func (l *CustomLogger) Logf(format string, args ...interface{}) {
 	l.logger.Debug().Msgf(format, args...)
 }
 ```
+</details>
 
-Instantiate metering client with custom logger:
+Instantiate metering clients with custom logger:
+
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 package main
@@ -296,110 +338,39 @@ import (
 	"github.com/amberflo/metering-go"
 )
 
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
+
 func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
 	customerLogger := NewCustomLogger()
 
 	//Instantiate a new metering client with custom logger
-	Metering := metering.NewMeteringClient(
+	meteringClient := metering.NewMeteringClient(
 		apiKey,
 		metering.WithLogger(customerLogger),
 	)
 
 	//initialize the usage client with custom logger
-	UsageClient := metering.NewUsageClient(
+	usageClient := metering.NewUsageClient(
 		apiKey,
-		metering.WithUsageLogger(customerLogger),
+		metering.WithCustomLogger(customerLogger),
 	)
 
 	//initialize the usage cost client with custom logger
 	usageCostClient := metering.NewUsageCostClient(
 		apiKey,
-		metering.WithUsageLogger(customerLogger),
+		metering.WithCustomLogger(customerLogger),
 	)
 }
 ```
+</details>
 
-## Sample Usage Cost SDK code
-
-```go
-package main
-
-import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/amberflo/metering-go"
-)
-
-func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
-
-	customerId := "dell-8"
-
-	//initialize the usage cost client
-	usageCostClient := metering.NewUsageCostClient(apiKey)
-
-	//set the start time of the time range in Epoch seconds
-	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (24 * 60 * 60)
-	timeRange := &metering.TimeRange{
-		StartTimeInSeconds: startTimeInSeconds,
-	}
-
-	//specify the limit and sort order
-	takeForCost := &metering.Take{
-		Limit:       10,
-		IsAscending: false,
-	}
-
-	// Example 1: group by product plan
-	// setup usage cost query params
-	// visit following link for description of payload:
-	// https://docs.amberflo.io/reference/post_payments-cost-usage-cost
-	usageCostResult, err := usageCostClient.GetUsageCost(&metering.UsageCostsKey{
-		TimeGroupingInterval: metering.Day,
-		GroupBy:              []string{"product_plan_id"},
-		TimeRange:            timeRange,
-		Take:                 takeForCost,
-	})
-	fmt.Println("Usage Cost Result")
-	printUsageCostData(*usageCostResult, err)
-
-	//Example 2: filter for a cost for specific customer
-	//setup usage query params
-	filterForCost := make(map[string][]string)
-	filterForCost["customerId"] = []string{customerId}
-
-	usageCostResult, err = usageCostClient.GetUsageCost(&metering.UsageCostsKey{
-		TimeGroupingInterval: metering.Day,
-		GroupBy:              []string{"product_plan_id"},
-		TimeRange:            timeRange,
-		Take:                 takeForCost,
-		Filters:              filterForCost,
-	})
-	fmt.Println("Usage cost for specific customer")
-	printUsageCostData(*usageCostResult, err)
-}
-
-func printUsageCostData(usageCostResult metering.UsageCosts, err error) {
-	if err != nil {
-		fmt.Println("Usage cost error: ", err)
-		return
-	}
-
-	jsonString, err := json.MarshalIndent(usageCostResult, "", "  ")
-	if err != nil {
-		fmt.Println("Usage cost error: ", err)
-		return
-	}
-
-	fmt.Println(string(jsonString))
-}
-```
-
-## Sample Usage Cost SDK with paging code
+## Query usage cost with paging
+[See API Reference](https://docs.amberflo.io/reference/post_payments-cost-usage-cost)
+<details>
+<summary>
+Sample Code
+</summary>
 
 ```go
 package main
@@ -411,14 +382,17 @@ import (
 	"github.com/amberflo/metering-go"
 )
 
-func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
 
+func main() {
 	customerId := "dell-8"
 
 	//initialize the usage cost client
-	usageCostClient := metering.NewUsageCostClient(apiKey)
+	usageCostClient := metering.NewUsageCostClient(
+		apiKey,
+		// metering.WithCustomLogger(customerLogger),
+	)
 
 	//set the start time of the time range in Epoch seconds
 	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (24 * 60 * 60)
@@ -477,8 +451,15 @@ func printUsageCostData(usageCostResult metering.UsageCosts, err error) {
 	fmt.Println(string(jsonString))
 }
 ```
+</details>
 
-## Sample to assign a pricing plan to a customer
+## Pricing plans
+[See API Reference](https://docs.amberflo.io/reference/post_payments-pricing-amberflo-customer-pricing)
+<details>
+<summary>
+Sample Code
+</summary>
+
 ```go
 package main
 
@@ -489,9 +470,10 @@ import (
 	"github.com/amberflo/metering-go"
 )
 
-func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
+
+func main() {	
 	customerId := "dell-8"
 
 	//Assign pricing plan to customer
@@ -510,8 +492,15 @@ func main() {
 	fmt.Println(pricingStatus)
 }
 ```
+</details>
 
-## Sample for prepaid client
+## Prepaid
+[See API Reference](https://docs.amberflo.io/reference/post_payments-pricing-amberflo-customer-prepaid)
+<details>
+<summary>
+Sample Code
+</summary>
+
 ```go
 package main
 
@@ -523,9 +512,10 @@ import (
 	"github.com/xtgo/uuid"
 )
 
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
+
 func main() {
-	//obtain your Amberflo API Key
-	apiKey := "my-api-key"
 	customerId := "dell-1800"
 
 	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (1 * 24 * 60 * 60)
@@ -536,6 +526,7 @@ func main() {
 	//initialize the prepaidClient 
 	prepaidClient := metering.NewPrepaidClient(
 		apiKey, 
+		//use a custom logger
 		//metering.WithCustomLogger(customerLogger), for custom logger
 	)
 
@@ -587,3 +578,75 @@ func main() {
 
 }
 ```
+</details>
+
+## Signals
+[See API Reference](https://docs.amberflo.io/reference/post_notifications)  
+[Guide](https://docs.amberflo.io/docs/create-real-time-alerts)
+<details>
+<summary>
+Sample Code
+</summary>
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/amberflo/metering-go"
+)
+
+//obtain your Amberflo API Key
+var apiKey = "my-api-key"
+
+func main() {
+	signalsClient := metering.NewSignalsClient(
+		apiKey,
+		//use a custom logger
+		//metering.WithCustomLogger(customLogger), 
+	)
+
+	invoiceAlert := &metering.Notification{
+		Name:               "invoice-tracker-alert",
+		NotificationType:   metering.Invoice,
+		Email:              []string{"amberflo.tester@gmail.com"},
+		ThresholdValue:     "200",
+		CustomerFilterMode: metering.PerCustomer,
+		Enabled:            true,
+	}
+
+	//Create a new signal
+	invoiceAlert, err := signalsClient.CreateSignal(invoiceAlert)
+	if err != nil {
+		fmt.Println("API error: ", err)
+		return
+	}
+
+	//update an existing signal
+	invoiceAlert.ThresholdValue = "150"
+	invoiceAlert.Enabled = false //disable a signal without deleting
+	invoiceAlert, err = signalsClient.UpdateSignal(invoiceAlert)
+	if err != nil {
+		fmt.Println("API error: ", err)
+		return
+	}
+
+	//get an existing signal
+	invoiceAlert, err = signalsClient.GetSignal(invoiceAlert.Id)
+	if err != nil {
+		fmt.Println("API error: ", err)
+		return
+	}
+
+	//delete a signal
+	invoiceAlert, err = signalsClient.DeleteSignal(invoiceAlert.Id)
+	if err != nil {
+		fmt.Println("API error: ", err)
+		return
+	}
+	fmt.Println("signal with following id deleted: ", invoiceAlert.Id)
+}
+```
+</details>

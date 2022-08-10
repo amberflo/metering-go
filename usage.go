@@ -3,9 +3,11 @@ package metering
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"reflect"
 )
+
+type UsageClient struct {
+	BaseClient
+}
 
 type AggregationType string
 
@@ -57,27 +59,10 @@ type DetailedMeterAggregation struct {
 	ClientMeters               []DetailedMeterAggregationGroup `json:"clientMeters,omitempty"`
 }
 
-type UsageClient struct {
-	ApiKey             string
-	Client             http.Client
-	Logger             Logger
-	UsageBase          UsageBase
-	AmberfloHttpClient AmberfloHttpClient
-}
-
-func NewUsageClient(apiKey string, opts ...UsageOption) *UsageClient {
-	u := &UsageClient{
-		ApiKey: apiKey,
-		Client: *http.DefaultClient,
-	}
-
-	u.Logger = u.UsageBase.GetLoggerInstance(opts...)
-	u.logf("instantiated the logger of type: %s", reflect.TypeOf(u.Logger))
-	u.logf("Instantiating amberflo.io Usage client")
-
-	amberfloHttpClient := NewAmberfloHttpClient(apiKey, u.Logger, u.Client)
-	u.AmberfloHttpClient = *amberfloHttpClient
-
+func NewUsageClient(apiKey string, opts ...ClientOption) *UsageClient {
+	bc := NewBaseClient(apiKey, opts...)
+	u := &UsageClient{BaseClient: *bc}
+	u.logf("Instantiating amberflo.io Usage Client")
 	return u
 }
 
@@ -113,8 +98,4 @@ func (u *UsageClient) GetUsage(payload *UsagePayload) (*DetailedMeterAggregation
 	json.Unmarshal([]byte(*usageResult), &result)
 
 	return &result, nil
-}
-
-func (uc *UsageClient) logf(msg string, args ...interface{}) {
-	uc.Logger.Logf(msg, args...)
 }

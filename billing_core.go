@@ -24,7 +24,3 @@ const (
 	NOT_NEEDED      PaymentStatus = "NOT_NEEDED"
 	UNKNOWN         PaymentStatus = "UNKNOWN"
 )
-
-type Currency struct {
-	CurrencyCode string `json:"currencyCode,omitempty"`
-}
