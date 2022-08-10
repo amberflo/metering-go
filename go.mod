@@ -1,4 +1,4 @@
-module github.com/amberflo/metering-go
+module github.com/amberflo/metering-go/v2
 
 go 1.16
 
