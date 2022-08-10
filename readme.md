@@ -5,7 +5,7 @@
 In your GO code project directory, download package
 
 ```sh
-go get github.com/amberflo/metering-go
+go get github.com/amberflo/metering-go/v2@v2.0.1
 ```
 
 ## Ingesting meters
@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 	"github.com/xtgo/uuid"
 )
 
@@ -122,7 +122,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 )
 
 //obtain your Amberflo API Key
@@ -210,7 +210,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 )
 
 //obtain your Amberflo API Key
@@ -335,7 +335,7 @@ Sample Code
 package main
 
 import (
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 )
 
 //obtain your Amberflo API Key
@@ -379,7 +379,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 )
 
 //obtain your Amberflo API Key
@@ -467,7 +467,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 )
 
 //obtain your Amberflo API Key
@@ -508,7 +508,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 	"github.com/xtgo/uuid"
 )
 
@@ -595,7 +595,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/amberflo/metering-go"
+	"github.com/amberflo/metering-go/v2"
 )
 
 //obtain your Amberflo API Key
