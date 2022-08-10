@@ -511,3 +511,79 @@ func main() {
 }
 ```
 
+## Sample for prepaid client
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/amberflo/metering-go"
+	"github.com/xtgo/uuid"
+)
+
+func main() {
+	//obtain your Amberflo API Key
+	apiKey := "my-api-key"
+	customerId := "dell-1800"
+
+	startTimeInSeconds := (time.Now().UnixNano() / int64(time.Second)) - (1 * 24 * 60 * 60)
+
+	//*****************************************
+	//*****************************************
+	//Prepaid SDK
+	//initialize the prepaidClient 
+	prepaidClient := metering.NewPrepaidClient(
+		apiKey, 
+		//metering.WithCustomLogger(customerLogger), for custom logger
+	)
+
+	recurrenceFrequency := &metering.BillingPeriod{
+		Interval:       metering.DAY,
+		IntervalsCount: 1,
+	}
+
+	prepaidOrder := &metering.CustomerPrepaid{
+		Id:                  uuid.NewRandom().String(),
+		CustomerId:          customerId,
+		ExternalPayment:     true,
+		StartTimeInSeconds:  startTimeInSeconds,
+		PrepaidPrice:        123,
+		PrepaidOfferVersion: -1,
+		RecurrenceFrequency: recurrenceFrequency,
+	}
+
+	// Create a prepaid order
+	prepaidOrder, err := prepaidClient.CreatePrepaidOrder(prepaidOrder)
+	if err != nil {
+		fmt.Println("Prepaid API error: ", err)
+		return
+	}
+
+	// Get a list of all active prepaid orders
+	prepaidOrders, err := prepaidClient.GetActivePrepaidOrders(customerId)
+	if err != nil {
+		fmt.Println("Prepaid API error: ", err)
+		return
+	}
+
+	// Update the external payment status of a prepaid order
+	externalPrepaidPaymentStatus := &metering.ExternalPrepaidPaymentStatus{
+		PaymentStatus:        metering.SETTLED,
+		SystemName:           "Stripe",
+		PaymentId:            "payment-id-1",
+		PaymentTimeInSeconds: (time.Now().UnixNano() / int64(time.Second)),
+		PrepaidUri:           prepaidOrder.FirstInvoiceUri,
+	}
+	externalPrepaidPaymentStatus, err = prepaidClient.UpdateExternalPrepaidStatus(externalPrepaidPaymentStatus)
+
+	// Delete a prepaid order
+	err = prepaidClient.DeletePrepaidOrder(prepaidOrder.Id, customerId)
+	if err != nil {
+		fmt.Println("Prepaid API error: ", err)
+		return
+	}
+
+}
+```
