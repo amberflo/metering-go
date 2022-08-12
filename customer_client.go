@@ -15,7 +15,7 @@ type Customer struct {
 	CustomerName  string            `json:"customerName"`
 	CustomerEmail string            `json:"customerEmail"`
 	Traits        map[string]string `json:"traits,omitempty"`
-	Enabled       bool              `json:"enabled,omitempty"`
+	Enabled       bool              `json:"enabled"`
 	UpdateTime    int64             `json:"updateTime,omitempty"`
 	CreateTime    int64             `json:"createTime,omitempty"`
 }
