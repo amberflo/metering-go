@@ -582,7 +582,8 @@ func main() {
 
 ## Signals
 [See API Reference](https://docs.amberflo.io/reference/post_notifications)  
-[Guide](https://docs.amberflo.io/docs/create-real-time-alerts)
+[Understanding different Signal Types](https://docs.amberflo.io/docs/walkthrough-of-signal-types)
+[Guide](https://docs.amberflo.io/docs/alerts-and-signals-revenue)
 <details>
 <summary>
 Sample Code
