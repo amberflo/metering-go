@@ -2,6 +2,7 @@ package metering
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync"
 
@@ -11,20 +12,18 @@ import (
 	"time"
 
 	"github.com/jehiah/go-strftime"
-	"github.com/segmentio/backo-go"
 	"github.com/xtgo/uuid"
 )
 
 const (
 	Endpoint               = "https://app.amberflo.io"
-	RetryCount             = 5
+	IngestEndpoint         = "https://ingest.amberflo.io"
+	RetryCount             = 6
 	BatchSize              = 100
 	AwsMarketPlaceTraitKey = "awsm.customerIdentifier"
 	StripeTraitKey         = "stripeId"
 	CancelMeter            = "aflo.cancel_previous_resource_event"
 )
-
-var Backo = backo.DefaultBacko()
 
 // Message interface.
 type message interface {
@@ -108,7 +107,7 @@ type Metering struct {
 //Create a new instance with a custom logger
 func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	m := &Metering{
-		Endpoint:        Endpoint,
+		Endpoint:        IngestEndpoint,
 		IntervalSeconds: 1 * time.Second,
 		BatchSize:       BatchSize,
 		Debug:           false,
@@ -225,18 +224,30 @@ func (m *Metering) send(msgs []interface{}) error {
 	}
 
 	//retry attempts to call Ingest API
-	for i := 0; i < RetryCount; i++ {
+	for i := 0; i <= RetryCount; i++ {
 		if i > 0 {
 			m.logf("Ingest Api call retry attempt: %d", i)
 		}
 		if err = m.ingestToApi(b); err == nil {
 			return nil
 		}
-		m.logf("Retry attempt: %d error: %s ", i, err.Error())
-		Backo.Sleep(i)
+		m.logf("Retry attempt: %d error: %s", i, err.Error())
+		time.Sleep(backoffDelay(i))
 	}
 
 	return err
+}
+
+var retryDelays = []float64{2, 6, 12, 20, 40, 80}
+
+const oneSecond = float64(time.Second)
+
+func backoffDelay(retryNumber int) time.Duration {
+	duration := 80.0
+	if retryNumber < 6 {
+		duration = retryDelays[retryNumber]
+	}
+	return time.Duration(duration * rand.Float64() * oneSecond)
 }
 
 //Ingest Api Client code
