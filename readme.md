@@ -5,11 +5,11 @@
 In your GO code project directory, download package
 
 ```sh
-go get github.com/amberflo/metering-go/v2@v2.0.1
+go get github.com/amberflo/metering-go/v2@v2.1.0
 ```
 
 ## Ingesting meters
-[See API Reference](https://docs.amberflo.io/reference/post_ingest)  
+[See API Reference](https://docs.amberflo.io/reference/post_ingest)
 [Guide](https://docs.amberflo.io/docs/cloud-metering-service)
 <details>
 <summary>
@@ -473,7 +473,7 @@ import (
 //obtain your Amberflo API Key
 var apiKey = "my-api-key"
 
-func main() {	
+func main() {
 	customerId := "dell-8"
 
 	//Assign pricing plan to customer
@@ -523,9 +523,9 @@ func main() {
 	//*****************************************
 	//*****************************************
 	//Prepaid SDK
-	//initialize the prepaidClient 
+	//initialize the prepaidClient
 	prepaidClient := metering.NewPrepaidClient(
-		apiKey, 
+		apiKey,
 		//use a custom logger
 		//metering.WithCustomLogger(customerLogger), for custom logger
 	)
@@ -581,8 +581,8 @@ func main() {
 </details>
 
 ## Signals
-[See API Reference](https://docs.amberflo.io/reference/post_notifications)  
-[Understanding different signal types](https://docs.amberflo.io/docs/walkthrough-of-signal-types)  
+[See API Reference](https://docs.amberflo.io/reference/post_notifications)
+[Understanding different signal types](https://docs.amberflo.io/docs/walkthrough-of-signal-types)
 [Guide](https://docs.amberflo.io/docs/alerts-and-signals-revenue)
 <details>
 <summary>
@@ -606,7 +606,7 @@ func main() {
 	signalsClient := metering.NewSignalsClient(
 		apiKey,
 		//use a custom logger
-		//metering.WithCustomLogger(customLogger), 
+		//metering.WithCustomLogger(customLogger),
 	)
 
 	invoiceAlert := &metering.Notification{
