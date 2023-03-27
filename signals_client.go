@@ -45,7 +45,7 @@ func NewSignalsClient(apiKey string, opts ...ClientOption) *SignalsClient {
 }
 
 type Notification struct {
-	Id                 string              `json:"id"`
+	Id                 string              `json:"id,omitempty"`
 	Name               string              `json:"name"`
 	Description        string              `json:"description,omitempty"`
 	NotificationType   NotificationType    `json:"notificationType"`
