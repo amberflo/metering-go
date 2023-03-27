@@ -54,7 +54,7 @@ type Notification struct {
 	ThresholdValue     string              `json:"thresholdValue"`
 	Range              AggregationInterval `json:"range,omitempty"`
 	Cron               string              `json:"cron,omitempty"`
-	Email              []string            `json:"email,omitempty"`
+	Email              []string            `json:"email"`
 	WebhookUrl         string              `json:"webhookUrl,omitempty"`
 	WebhookHeaders     string              `json:"webhookHeaders,omitempty"`
 	WebhookPayload     string              `json:"webhookPayload,omitempty"`
