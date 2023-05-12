@@ -1,18 +1,20 @@
 package metering
 
 import (
-	"fmt"
-	"math/rand"
-	"strings"
-	"sync"
-
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math/rand"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/jehiah/go-strftime"
 	"github.com/xtgo/uuid"
+	"go.uber.org/zap"
+
+	"github.com/amberflo/metering-go/v2/internal/zaplog"
 )
 
 const (
@@ -37,7 +39,7 @@ type Message struct {
 	SentAt    string `json:"-"`
 }
 
-//Metering message
+// Metering message
 type MeterMessage struct {
 	UniqueId          string            `json:"uniqueId"`
 	MeterApiName      string            `json:"meterApiName"`
@@ -74,6 +76,10 @@ func WithLogger(logger Logger) MeteringOption {
 	}
 }
 
+func NewZapLogger(l *zap.SugaredLogger) *zaplog.ZapLogger {
+	return zaplog.NewZapLogger(l)
+}
+
 // Amberflo.io metering client batches messages and flushes periodically at IntervalSeconds or
 // when the BatchSize limit is exceeded.
 type Metering struct {
@@ -104,7 +110,7 @@ type Metering struct {
 	counter int
 }
 
-//Create a new instance with a custom logger
+// Create a new instance with a custom logger
 func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	m := &Metering{
 		Endpoint:        IngestEndpoint,
@@ -120,7 +126,7 @@ func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 		uid:             uid,
 	}
 
-	//iterate through each option
+	// iterate through each option
 	for _, opt := range opts {
 		opt(m)
 	}
@@ -138,7 +144,7 @@ func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	return m
 }
 
-//Queue a metering message to send to Ingest API. Messages are flushes periodically at IntervalSeconds or when the BatchSize limit is exceeded.
+// Queue a metering message to send to Ingest API. Messages are flushes periodically at IntervalSeconds or when the BatchSize limit is exceeded.
 func (m *Metering) Meter(msg *MeterMessage) error {
 	if msg.MeterApiName == "" {
 		return errors.New("'MeterName' is required field")
@@ -155,48 +161,48 @@ func (m *Metering) Meter(msg *MeterMessage) error {
 	return nil
 }
 
-//Start goroutine for concurrent execution to monitor channels
+// Start goroutine for concurrent execution to monitor channels
 func (m *Metering) startLoop() {
 	go m.loop()
 }
 
-//Queue the metering message
+// Queue the metering message
 func (m *Metering) queue(msg message) {
 	m.once.Do(m.startLoop)
 	msg.setMessageId(m.uid())
 	msg.setTimestamp(timestamp(m.now()))
-	//send message to channel
+	// send message to channel
 	m.msgs <- msg
 }
 
-//Flush all messages in the queue, stop the timer, close all channels, shutdown the client
+// Flush all messages in the queue, stop the timer, close all channels, shutdown the client
 func (m *Metering) Shutdown() error {
 	m.log("Running shutdown....")
 	m.once.Do(m.startLoop)
-	//start shutdown by sending message to quit channel
+	// start shutdown by sending message to quit channel
 	m.quit <- struct{}{}
-	//close the ingest meter messages channel
+	// close the ingest meter messages channel
 	close(m.msgs)
-	//receive shutdown message, blocking call
+	// receive shutdown message, blocking call
 	<-m.shutdown
 	m.log("Shutdown completed")
 	return nil
 }
 
-//Sends batch to API asynchonrously and limits the number of concurrrent calls to API
+// Sends batch to API asynchonrously and limits the number of concurrrent calls to API
 func (m *Metering) sendAsync(msgs []interface{}) {
 	m.mutex.Lock()
 
-	//support 1000 asyncrhonus calls
+	// support 1000 asyncrhonus calls
 	for m.counter == 1000 {
-		//sleep until signal
+		// sleep until signal
 		m.upcond.Wait()
 	}
 	m.counter++
 	m.mutex.Unlock()
 	m.wg.Add(1)
 
-	//spin new thread to call API with retry
+	// spin new thread to call API with retry
 	go func() {
 		err := m.send(msgs)
 		if err != nil {
@@ -204,26 +210,26 @@ func (m *Metering) sendAsync(msgs []interface{}) {
 		}
 		m.mutex.Lock()
 		m.counter--
-		//signal the waiting blocked wait
+		// signal the waiting blocked wait
 		m.upcond.Signal()
 		m.mutex.Unlock()
 		m.wg.Done()
 	}()
 }
 
-//Send the batch request with retry
+// Send the batch request with retry
 func (m *Metering) send(msgs []interface{}) error {
 	if len(msgs) == 0 {
 		return nil
 	}
 
-	//serialize to json
+	// serialize to json
 	b, err := json.Marshal(msgs)
 	if err != nil {
 		return fmt.Errorf("error marshalling msgs: %s", err)
 	}
 
-	//retry attempts to call Ingest API
+	// retry attempts to call Ingest API
 	for i := 0; i <= RetryCount; i++ {
 		if i > 0 {
 			m.logf("Ingest Api call retry attempt: %d", i)
@@ -250,12 +256,11 @@ func backoffDelay(retryNumber int) time.Duration {
 	return time.Duration(duration * rand.Float64() * oneSecond)
 }
 
-//Ingest Api Client code
+// Ingest Api Client code
 func (m *Metering) ingestToApi(b []byte) error {
 	m.logf("Ingest API Payload %s", string(b))
 	url := m.Endpoint + "/ingest"
 	_, err := m.AmberfloHttpClient.sendHttpRequest("Ingest Api", url, "POST", b)
-
 	if err != nil {
 		return fmt.Errorf("ingestToApi()=>Error calling ingest API: %s", err)
 	}
@@ -263,7 +268,7 @@ func (m *Metering) ingestToApi(b []byte) error {
 	return nil
 }
 
-//Run the listener loop in a separate thread to monitor all channels
+// Run the listener loop in a separate thread to monitor all channels
 func (m *Metering) loop() {
 	var msgs []interface{}
 	tick := time.NewTicker(m.IntervalSeconds)
@@ -271,11 +276,11 @@ func (m *Metering) loop() {
 	m.logf("loop() ==> Effective batch size %d interval in seconds %d retry attempts %d", m.BatchSize, m.IntervalSeconds, RetryCount)
 
 	for {
-		//select to wait on multiple communication operations
-		//blocks until one of cases can run
+		// select to wait on multiple communication operations
+		// blocks until one of cases can run
 		select {
 
-		//process new meter message
+		// process new meter message
 		case msg := <-m.msgs:
 			m.debugf("buffer (%d/%d) %v", len(msgs), m.BatchSize, msg)
 			msgs = append(msgs, msg)
@@ -285,7 +290,7 @@ func (m *Metering) loop() {
 				msgs = make([]interface{}, 0, m.BatchSize)
 			}
 
-		//timer event
+		// timer event
 		case <-tick.C:
 			if len(msgs) > 0 {
 				m.debugf("interval reached - flushing %d", len(msgs))
@@ -295,21 +300,21 @@ func (m *Metering) loop() {
 				m.debug("interval reached – nothing to send")
 			}
 
-		//process shutdown
+		// process shutdown
 		case <-m.quit:
-			//stop the timer
+			// stop the timer
 			tick.Stop()
-			//flush the queue
+			// flush the queue
 			for msg := range m.msgs {
 				m.debugf("queue: (%d/%d) %v", len(msgs), m.BatchSize, msg)
 				msgs = append(msgs, msg)
 			}
 			m.debugf("Flushing %d messages", len(msgs))
 			m.sendAsync(msgs)
-			//wait for all messages to be sent to the API
+			// wait for all messages to be sent to the API
 			m.wg.Wait()
 			m.log("Queue flushed")
-			//let caller know shutdown is compelete
+			// let caller know shutdown is compelete
 			m.shutdown <- struct{}{}
 			return
 		}
