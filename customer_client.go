@@ -6,18 +6,33 @@ import (
 	"fmt"
 )
 
+type LifecycleStage string
+
+const (
+	ONBOARDING LifecycleStage = "onboarding"
+	TRIAL      LifecycleStage = "trial"
+	ACTIVE     LifecycleStage = "active"
+	OFFBOARDED LifecycleStage = "offboarded"
+)
+
 type CustomerClient struct {
 	BaseClient
 }
 
 type Customer struct {
-	CustomerId    string            `json:"customerId"`
-	CustomerName  string            `json:"customerName"`
-	CustomerEmail string            `json:"customerEmail"`
-	Traits        map[string]string `json:"traits,omitempty"`
-	Enabled       bool              `json:"enabled"`
-	UpdateTime    int64             `json:"updateTime,omitempty"`
-	CreateTime    int64             `json:"createTime,omitempty"`
+	CustomerId     string            `json:"customerId"`
+	CustomerName   string            `json:"customerName"`
+	CustomerEmail  string            `json:"customerEmail"`
+	Traits         map[string]string `json:"traits,omitempty"`
+	LifecycleStage LifecycleStage    `json:"lifecycleStage,omitempty"`
+	Enabled        bool              `json:"enabled"`
+	UpdateTime     int64             `json:"updateTime,omitempty"`
+	CreateTime     int64             `json:"createTime,omitempty"`
+}
+
+type UpdateLifecycleStageRequest struct {
+	CustomerId     string         `json:"customerId"`
+	LifecycleStage LifecycleStage `json:"lifecycleStage"`
 }
 
 func NewCustomerClient(apiKey string, opts ...ClientOption) *CustomerClient {
@@ -33,6 +48,34 @@ func (m *CustomerClient) AddorUpdateCustomer(customer *Customer, createInStripe 
 	}
 
 	return m.sendCustomerToApi(customer, createInStripe)
+}
+
+func (c *CustomerClient) UpdateLifecycleStage(request *UpdateLifecycleStageRequest) (*Customer, error) {
+	if request.CustomerId == "" || request.LifecycleStage == "" {
+		return nil, errors.New("'CustomerId' and 'LifecycleStage' are required fields")
+	}
+
+	signature := fmt.Sprintf("updateLifecycleStage(%v)", request)
+
+	b, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("%s error marshalling payload: %s", signature, err)
+	}
+
+	url := fmt.Sprintf("%s/customers/stage", Endpoint)
+	httpMethod := "PUT"
+	b, err = c.AmberfloHttpClient.sendHttpRequest("Customers/Stage", url, httpMethod, b)
+	if err != nil {
+		return nil, fmt.Errorf("%s error making %s http call: %s", signature, httpMethod, err)
+	}
+
+	customer := &Customer{}
+	err = json.Unmarshal(b, &customer)
+	if err != nil {
+		return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
+	}
+
+	return customer, nil
 }
 
 func (c *CustomerClient) GetCustomer(customerId string) (*Customer, error) {
