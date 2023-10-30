@@ -27,16 +27,21 @@ type UsageGroupCostValue struct {
 	MeterUnitsPercentageDiff float64 `json:"meterUnitsPercentageDiff"`
 	PriceBeforeDiscounts     float64 `json:"priceBeforeDiscounts"`
 	PrepaidUsed              float64 `json:"prepaidUsed"`
+	PayAsYouGoPromotionUsed  float64 `json:"payAsYouGoPromotionUsed"`
 }
 
 type UsageGroupCosts struct {
-	GroupInfos           map[string]string     `json:"groupInfos"`
-	MeteredUnits         float64               `json:"meteredUnits"`
-	Price                float64               `json:"price"`
-	PriceBeforeDiscounts float64               `json:"priceBeforeDiscounts"`
-	PrepaidUsed          float64               `json:"prepaidUsed"`
-	PriceMinusPrepaid    float64               `json:"priceMinusPrepaid"`
-	Costs                []UsageGroupCostValue `json:"costs"`
+	GroupInfos                       map[string]string     `json:"groupInfos"`
+	MeteredUnits                     float64               `json:"meteredUnits"`
+	Price                            float64               `json:"price"`
+	PriceBeforeDiscounts             float64               `json:"priceBeforeDiscounts"`
+	PrepaidUsed                      float64               `json:"prepaidUsed"`
+	PriceMinusPrepaid                float64               `json:"priceMinusPrepaid"`
+	PayAsYouGoPromotionUsed          float64               `json:"payAsYouGoPromotionUsed"`
+	NonPayAsYouGoPromotionUsed       float64               `json:"nonPayAsYouGoPromotionUsed"`
+	PriceAfterPayAsYouGoPromotion    float64               `json:"priceAfterPayAsYouGoPromotion"`
+	PriceAfterNonPayAsYouGoPromotion float64               `json:"priceAfterNonPayAsYouGoPromotion"`
+	Costs                            []UsageGroupCostValue `json:"costs"`
 }
 
 type UsageCosts struct {
