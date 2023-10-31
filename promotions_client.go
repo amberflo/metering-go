@@ -17,15 +17,14 @@ func NewPromotionClient(apiKey string, opts ...ClientOption) *PromotionClient {
 }
 
 type CustomerAppliedPromotion struct {
-	CustomerId           string    `json:"customerId"`
-	PromotionId          string    `json:"promotionId"`
-	ProductId            string    `json:"productId"`
-	AppliedTimeInSeconds string    `json:"appliedTimeInSeconds"`
-	AddedTimeInSeconds   string    `json:"addedTimeInSeconds"`
-	RemovedTimeInSeconds string    `json:"removedTimeInSeconds"`
-	RelationId           string    `json:"relationId"`
-	AppliedTimeRange     TimeRange `json:"appliedTimeRange"`
-	Priority             string    `json:"priority"`
+	CustomerId           string  `json:"customerId"`
+	PromotionId          string  `json:"promotionId"`
+	ProductId            string  `json:"productId"`
+	AppliedTimeInSeconds int64   `json:"appliedTimeInSeconds"`
+	AddedTimeInSeconds   int64   `json:"addedTimeInSeconds"`
+	RemovedTimeInSeconds int64   `json:"removedTimeInSeconds"`
+	RelationId           string  `json:"relationId"`
+	Priority             float64 `json:"priority"`
 }
 
 type ApplyPromotionRequest struct {
@@ -45,7 +44,7 @@ type Promotion struct {
 	PromotionName          string `json:"promotionName"`
 	Description            string `json:"description"`
 	LockingStatus          string `json:"lockingStatus"`
-	LastUpdateTimeInMillis string `json:"lastUpdateTimeInMillis"`
+	LastUpdateTimeInMillis int64  `json:"lastUpdateTimeInMillis"`
 }
 
 func (pc *PromotionClient) ApplyPromotion(request *ApplyPromotionRequest) (*CustomerAppliedPromotion, error) {
@@ -79,7 +78,6 @@ func (pc *PromotionClient) ApplyPromotion(request *ApplyPromotionRequest) (*Cust
 func (pc *PromotionClient) ListAppliedPromotion(customerId string) (*[]CustomerAppliedPromotion, error) {
 	signature := fmt.Sprintf("ListAppliedPromotions(%s): ", customerId)
 
-	pc.logf("%s payload %s", signature)
 	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions/list?ProductId=1&CustomerId=%s", Endpoint, customerId)
 	body, err := pc.AmberfloHttpClient.sendHttpRequest("Customer Promotions", url, "GET", nil)
 	if err != nil {
@@ -97,25 +95,17 @@ func (pc *PromotionClient) ListAppliedPromotion(customerId string) (*[]CustomerA
 	return &appliedPromotions, nil
 }
 
-func (pc *PromotionClient) RemovePromotion(request *RemovePromotionRequest) (*string, error) {
+func (pc *PromotionClient) RemovePromotion(request *RemovePromotionRequest) error {
 	signature := fmt.Sprintf("RemovePromotion(%s): ", request)
 
-	bytes, err := json.Marshal(request)
-	if err != nil {
-		return nil, fmt.Errorf("%s error marshalling payload: %s", signature, err)
-	}
-
-	pc.logf("%s json payload %s", signature, string(bytes))
-	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions", Endpoint)
-	body, err := pc.AmberfloHttpClient.sendHttpRequest("Customer Promotions", url, "DELETE", bytes)
+	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions?CustomerId=%s&PromotionId=%s", Endpoint, request.CustomerId, request.PromotionId)
+	_, err := pc.AmberfloHttpClient.sendHttpRequest("Customer Promotions", url, "DELETE", nil)
 	if err != nil {
 		pc.logf("%s API error: %s", signature, err)
-		return nil, fmt.Errorf("API error: %s", err)
+		return fmt.Errorf("API error: %s", err)
 	}
 
-	bodyString := string(body)
-
-	return &bodyString, nil
+	return nil
 }
 
 func (pc *PromotionClient) ListPromotions() (*[]Promotion, error) {
@@ -142,7 +132,7 @@ func (pc *PromotionClient) ListPromotions() (*[]Promotion, error) {
 func (pc *PromotionClient) GetPromotionById(id string) (*Promotion, error) {
 	signature := fmt.Sprintf("GetPromotionById(%s): ", id)
 
-	pc.logf("%s payload %s", signature)
+	pc.logf("%s", signature)
 	url := fmt.Sprintf("%s/payments/pricing/amberflo/account-pricing/promotions?id=%s", Endpoint, id)
 	body, err := pc.AmberfloHttpClient.sendHttpRequest("Promotions", url, "GET", nil)
 	if err != nil {
