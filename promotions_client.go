@@ -39,12 +39,51 @@ type RemovePromotionRequest struct {
 	RelationId  string `json:"relationId"`
 }
 
+type PromotionRecurrenceInterval struct {
+	IntervalLength      string `json:"intervalLength,omitempty"`
+	IntervalLengthCount int32  `json:"intervalLengthCount,omitempty"`
+	MaxRecurrence       int32  `json:"maxRecurrence,omitempty"`
+}
+
+type HistoryRequirements struct {
+	Cycles int32 `json:"cycles,omitempty"`
+	Months int32 `json:"months,omitempty"`
+}
+
+type Measure struct {
+	Type string `json:"type,omitempty"`
+}
+
 type Promotion struct {
-	Id                     string `json:"id"`
-	PromotionName          string `json:"promotionName"`
-	Description            string `json:"description"`
-	LockingStatus          string `json:"lockingStatus"`
-	LastUpdateTimeInMillis int64  `json:"lastUpdateTimeInMillis"`
+	Id                           string                       `json:"id"`
+	Type                         string                       `json:"type"`
+	PromotionName                string                       `json:"promotionName"`
+	Description                  string                       `json:"description"`
+	LockingStatus                string                       `json:"lockingStatus"`
+	LastUpdateTimeInMillis       int64                        `json:"lastUpdateTimeInMillis"`
+	DimensionConstraintMap       *map[string]string           `json:"dimensionConstraintMap,omitempty"`
+	CustomerTags                 *map[string]string           `json:"customerTags,omitempty"`
+	IsHidden                     *bool                        `json:"isHidden,omitempty"`
+	Discount                     *float64                     `json:"discount,omitempty"`
+	TotalMaxDiscount             *float64                     `json:"totalMaxDiscount,omitempty"`
+	TargetProductId              *string                      `json:"targetProductId,omitempty"`
+	TargetProductItemId          *string                      `json:"targetProductItemId,omitempty"`
+	AcceptablePromotionTimeRange *TimeRange                   `json:"acceptablePromotionTimeRange,omitempty"`
+	RecurrenceInterval           *PromotionRecurrenceInterval `json:"recurrenceInterval,omitempty"`
+	TargetItemId                 *string                      `json:"targetItemId,omitempty"`
+	PromotionType                *string                      `json:"promotionType,omitempty"`
+	PartnerTag                   *string                      `json:"partnerTag,omitempty"`
+	DiscountRatio                *float64                     `json:"discountRatio,omitempty"`
+	CycleMaxDiscount             *float64                     `json:"cycleMaxDiscount,omitempty"`
+	DiscountMap                  *map[string]float64          `json:"discountMap,omitempty"`
+	Measure                      *Measure                     `json:"measure,omitempty"`
+	PriceToDiscountMap           *map[string]float64          `json:"priceToDiscountMap,omitempty"`
+	DiscountCalculationStrategy  *string                      `json:"discountCalculationStrategy,omitempty"`
+	PromotionTimeLimit           *HistoryRequirements         `json:"promotionTimeLimit,omitempty"`
+	AcrossBillingPeriods         *bool                        `json:"acrossBillingPeriods,omitempty"`
+	TargetPlanId                 *string                      `json:"targetPlanId,omitempty"`
+	// TODO condition *PromotionCondition
+	// TODO promotionModel *PromotionModel
 }
 
 func (pc *PromotionClient) ApplyPromotion(request *ApplyPromotionRequest) (*CustomerAppliedPromotion, error) {
