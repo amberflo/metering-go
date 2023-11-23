@@ -20,22 +20,28 @@ func NewPrepaidClient(apiKey string, opts ...ClientOption) *PrepaidClient {
 }
 
 type CustomerPrepaid struct {
-	Id                          string         `json:"id"`
-	CustomerId                  string         `json:"customerId"`
-	StartTimeInSeconds          int64          `json:"startTimeInSeconds"`
-	EndTimeInSeconds            int64          `json:"endTimeInSeconds,omitempty"`
-	FirstCardEndTimeSeconds     int64          `json:"firstCardEndTimeSeconds"`
-	ProductId                   string         `json:"productId"`
-	PrepaidOfferVersion         int64          `json:"prepaidOfferVersion"`
-	PrepaidPrice                float64        `json:"prepaidPrice"`
-	OriginalWorth               float64        `json:"originalWorth"`
-	RecurrenceFrequency         *BillingPeriod `json:"recurrenceFrequency"`
-	ExternalPayment             bool           `json:"externalPayment"`
-	InternalStatus              string         `json:"internalStatus"`
-	PrepaidPaymentTimeInSeconds int64          `json:"prepaidPaymentTimeInSeconds"`
-	PaymentStatus               PaymentStatus  `json:"paymentStatus"`
-	FirstInvoiceUri             string         `json:"firstInvoiceUri"`
-	OriginalCurrency            string         `json:"originalCurrency,omitempty"`
+	Id                          string           `json:"id"`
+	CustomerId                  string           `json:"customerId"`
+	StartTimeInSeconds          int64            `json:"startTimeInSeconds"`
+	EndTimeInSeconds            int64            `json:"endTimeInSeconds,omitempty"`
+	FirstCardEndTimeSeconds     int64            `json:"firstCardEndTimeSeconds"`
+	ProductId                   string           `json:"productId"`
+	PrepaidOfferVersion         int64            `json:"prepaidOfferVersion"`
+	PrepaidPrice                float64          `json:"prepaidPrice"`
+	OriginalWorth               float64          `json:"originalWorth"`
+	RecurrenceFrequency         *BillingPeriod   `json:"recurrenceFrequency"`
+	ExternalPayment             bool             `json:"externalPayment"`
+	InternalStatus              string           `json:"internalStatus"`
+	PrepaidPaymentTimeInSeconds int64            `json:"prepaidPaymentTimeInSeconds"`
+	PaymentStatus               PaymentStatus    `json:"paymentStatus"`
+	FirstInvoiceUri             string           `json:"firstInvoiceUri"`
+	OriginalCurrency            string           `json:"originalCurrency,omitempty"`
+	Label                       string           `json:"label,omitempty"`
+	CustomPriority              float64          `json:"customPriority,omitempty"`
+	PrepaidPriority             *PrepaidPriority `json:"prepaidPriority"`
+	PaymentId                   string           `json:"paymentId,omitempty"`
+	CreateTimeInSeconds         int64            `json:"createTimeInSeconds,omitempty"`
+	ModifiedTimeInSeconds       int64            `json:"modifiedTimeInSeconds"`
 }
 
 type ExternalPrepaidPaymentStatus struct {

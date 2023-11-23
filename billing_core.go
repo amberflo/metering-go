@@ -13,6 +13,13 @@ const (
 	YEAR  BillingPeriodInterval = "YEAR"
 )
 
+type PrepaidPriority string
+
+const (
+	HIGHEST_PRIORITY PrepaidPriority = "HIGHEST_PRIORITY"
+	LOWEST_PRIORITY  PrepaidPriority = "LOWEST_PRIORITY"
+)
+
 type PaymentStatus string
 
 const (
