@@ -13,20 +13,23 @@ type SignalsClient struct {
 type NotificationType string
 
 const (
-	Usage            NotificationType = "usage"
-	Cost             NotificationType = "cost"
-	Invoice          NotificationType = "invoice"
-	Prepaid          NotificationType = "prepaid"
-	ProductItemUnits NotificationType = "product-item-units"
-	ProductItemPrice NotificationType = "product-item-price"
+	Usage               NotificationType = "usage"
+	Invoice             NotificationType = "invoice"
+	Prepaid             NotificationType = "prepaid"
+	PayAsYouGoPromotion NotificationType = "pay-as-you-go-promotion"
+	ProductItemUnits    NotificationType = "product-item-units"
+	ProductItemPrice    NotificationType = "product-item-price"
+	UndefinedMeter      NotificationType = "undefined-meter"
+	UndefinedCustomer   NotificationType = "undefined-customer"
 )
 
 type ThresholdCondition string
 
 const (
-	LessThan      ThresholdCondition = "less-than"
-	GreaterThan   ThresholdCondition = "greater-than"
-	PercentChange ThresholdCondition = "percent-change"
+	LessThan        ThresholdCondition = "less-than"
+	LessThanPercent ThresholdCondition = "less-than-percent"
+	GreaterThan     ThresholdCondition = "greater-than"
+	PercentChange   ThresholdCondition = "percent-change"
 )
 
 type CustomerFilterMode string
@@ -64,6 +67,7 @@ type Notification struct {
 	Enabled            bool                `json:"enabled"`
 	CreateTime         int64               `json:"createTime,omitempty"`
 	UpdateTime         int64               `json:"updateTime,omitempty"`
+	Frequency          string              `json:"frequency,omitempty"`
 }
 
 func (sc *SignalsClient) CreateSignal(notification *Notification) (*Notification, error) {
