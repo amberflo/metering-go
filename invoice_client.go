@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/go-querystring/query"
 )
 
@@ -91,42 +90,42 @@ type CreditUnit struct {
 }
 
 type CustomerProductInvoice struct {
-	InvoiceUri                        string                    `json:"invoiceUri"`
-	InvoiceKey                        CustomerProductInvoiceKey `json:"invoiceKey"`
-	PlanBillingPeriod                 BillingPeriod             `json:"planBillingPeriod"`
-	PlanName                          string                    `json:"planName"`
-	InvoiceStartTimeInSeconds         int64                     `json:"invoiceStartTimeInSeconds"`
-	InvoiceEndTimeInSeconds           int64                     `json:"invoiceEndTimeInSeconds"`
-	GracePeriodInHours                int64                     `json:"gracePeriodInHours"`
-	ProductItemInvoices               []ProductItemInvoice      `json:"productItemInvoices"`
-	AppliedPromotions                 []AppliedPromotion        `json:"appliedPromotions"`
-	ProductPlanFees                   []ProductPlanFee          `json:"productPlanFees"`
-	TotalBill                         ProductPlanBill           `json:"totalBill"`
-	InvoicePriceStatus                string                    `json:"invoicePriceStatus"`
-	CreditUnit                        CreditUnit                `json:"creditUnit"`
-	PaymentStatus                     PaymentStatus             `json:"paymentStatus"`
-	PaymentCreatedInSeconds           int64                     `json:"paymentCreatedInSeconds"`
-	ExternalSystemStatus              string                    `json:"externalSystemStatus"`
-	InvoiceBillInCredits              ProductPlanBill           `json:"invoiceBillInCredits"`
-	AvailablePrepaidLeft              float64                   `json:"availablePrepaidLeft"`
-	AvailablePrepaidLeftInCredits     float64                   `json:"availablePrepaidLeftInCredits"`
-	AvailablePayAsYouGoMoney          float64                   `json:"availablePayAsYouGoMoney"`
-	AvailablePayAsYouGoMoneyInCredits float64                   `json:"availablePayAsYouGoMoneyInCredits"`
+	InvoiceUri                        string                          `json:"invoiceUri"`
+	InvoiceKey                        GetCustomerInvoiceByDateRequest `json:"invoiceKey"`
+	PlanBillingPeriod                 BillingPeriod                   `json:"planBillingPeriod"`
+	PlanName                          string                          `json:"planName"`
+	InvoiceStartTimeInSeconds         int64                           `json:"invoiceStartTimeInSeconds"`
+	InvoiceEndTimeInSeconds           int64                           `json:"invoiceEndTimeInSeconds"`
+	GracePeriodInHours                int64                           `json:"gracePeriodInHours"`
+	ProductItemInvoices               []ProductItemInvoice            `json:"productItemInvoices"`
+	AppliedPromotions                 []AppliedPromotion              `json:"appliedPromotions"`
+	ProductPlanFees                   []ProductPlanFee                `json:"productPlanFees"`
+	TotalBill                         ProductPlanBill                 `json:"totalBill"`
+	InvoicePriceStatus                string                          `json:"invoicePriceStatus"`
+	CreditUnit                        CreditUnit                      `json:"creditUnit"`
+	PaymentStatus                     PaymentStatus                   `json:"paymentStatus"`
+	PaymentCreatedInSeconds           int64                           `json:"paymentCreatedInSeconds"`
+	ExternalSystemStatus              string                          `json:"externalSystemStatus"`
+	InvoiceBillInCredits              ProductPlanBill                 `json:"invoiceBillInCredits"`
+	AvailablePrepaidLeft              float64                         `json:"availablePrepaidLeft"`
+	AvailablePrepaidLeftInCredits     float64                         `json:"availablePrepaidLeftInCredits"`
+	AvailablePayAsYouGoMoney          float64                         `json:"availablePayAsYouGoMoney"`
+	AvailablePayAsYouGoMoneyInCredits float64                         `json:"availablePayAsYouGoMoneyInCredits"`
 }
 
-type InvoiceKey struct {
-	CustomerId         string `json:"customerId" validate:"required" url:"customerId"`
+type GetCustomerInvoiceRequest struct {
+	CustomerId         string `json:"customerId" url:"customerId"`
 	ProductId          string `json:"productId" url:"productId"`
 	FromCache          bool   `json:"fromCache" url:"fromCache"`
 	WithPaymentStatus  bool   `json:"withPaymentStatus" url:"withPaymentStatus"`
 }
 
-type CustomerProductInvoiceKey struct {
-	InvoiceKey
-	ProductPlanId      string `json:"productPlanId" url:"productPlanId" validate:"required"`
-	Year               int64  `json:"year" url:"year" validate:"required"`
-	Month              int64  `json:"month" url:"month" validate:"required"`
-	Day                int64  `json:"day" url:"day" validate:"required"`
+type GetCustomerInvoiceByDateRequest struct {
+	GetCustomerInvoiceRequest
+	ProductPlanId      string `json:"productPlanId" url:"productPlanId"`
+	Year               int64  `json:"year" url:"year"`
+	Month              int64  `json:"month" url:"month"`
+	Day                int64  `json:"day" url:"day"`
 }
 
 func NewInvoiceClient(apiKey string, opts ...ClientOption) *InvoiceClient {
@@ -136,17 +135,16 @@ func NewInvoiceClient(apiKey string, opts ...ClientOption) *InvoiceClient {
 	return ic
 }
 
-func (ic *InvoiceClient) GetLatestInvoice(invoiceKey *InvoiceKey) (*CustomerProductInvoice, error) {
-	signature := fmt.Sprintf("GetLatestInvoice(%s): ", invoiceKey.CustomerId)
-	if invoiceKey.ProductId == "" {
-		invoiceKey.ProductId = "1"
+func (ic *InvoiceClient) GetLatestInvoice(getCustomerInvoiceRequest *GetCustomerInvoiceRequest) (*CustomerProductInvoice, error) {
+	signature := fmt.Sprintf("GetLatestInvoice(%s): ", getCustomerInvoiceRequest.CustomerId)
+	if getCustomerInvoiceRequest.ProductId == "" {
+		getCustomerInvoiceRequest.ProductId = "1"
+	}
+	if getCustomerInvoiceRequest.CustomerId == "" {
+		return nil, errors.New("'CustomerId' is a required field");
 	}
 
-	if err := ic.validate(invoiceKey, signature); err != nil {
-		return nil, err
-	}
-
-	queryParams, err := ic.getQueryParams(invoiceKey)
+	queryParams, err := ic.getQueryParams(getCustomerInvoiceRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -166,17 +164,20 @@ func (ic *InvoiceClient) GetLatestInvoice(invoiceKey *InvoiceKey) (*CustomerProd
 	return customerProductInvoice, nil
 }
 
-func (ic *InvoiceClient) GetInvoice(customerProductInvoiceKey *CustomerProductInvoiceKey) (*CustomerProductInvoice, error) {
-	signature := fmt.Sprintf("GetInvoice(%s): ", customerProductInvoiceKey.CustomerId)
-	if customerProductInvoiceKey.ProductId == "" {
-		customerProductInvoiceKey.ProductId = "1"
+func (ic *InvoiceClient) GetInvoice(getCustomerInvoiceByDateRequest *GetCustomerInvoiceByDateRequest) (*CustomerProductInvoice, error) {
+	signature := fmt.Sprintf("GetInvoice(%s): ", getCustomerInvoiceByDateRequest.CustomerId)
+	if getCustomerInvoiceByDateRequest.ProductId == "" {
+		getCustomerInvoiceByDateRequest.ProductId = "1"
+	}
+	if getCustomerInvoiceByDateRequest.CustomerId == "" ||
+			getCustomerInvoiceByDateRequest.ProductPlanId == "" ||
+			getCustomerInvoiceByDateRequest.Year <= 0 ||
+			getCustomerInvoiceByDateRequest.Month <= 0 ||
+			getCustomerInvoiceByDateRequest.Day <= 0 {
+		return nil, errors.New("'ProductPlanId', 'Year', 'Month' and 'Day' are required fields");
 	}
 
-	if err := ic.validate(customerProductInvoiceKey, signature); err != nil {
-		return nil, err
-	}
-
-	queryParams, err := ic.getQueryParams(customerProductInvoiceKey)
+	queryParams, err := ic.getQueryParams(getCustomerInvoiceByDateRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -195,17 +196,16 @@ func (ic *InvoiceClient) GetInvoice(customerProductInvoiceKey *CustomerProductIn
 	return customerProductInvoice, nil
 }
 
-func (ic *InvoiceClient) ListInvoice(invoiceKey *InvoiceKey) (*[]CustomerProductInvoice, error) {
-	signature := fmt.Sprintf("ListInvoice(%s): ", invoiceKey.CustomerId)
-	if invoiceKey.ProductId == "" {
-		invoiceKey.ProductId = "1"
+func (ic *InvoiceClient) ListInvoice(getCustomerInvoiceRequest *GetCustomerInvoiceRequest) (*[]CustomerProductInvoice, error) {
+	signature := fmt.Sprintf("ListInvoice(%s): ", getCustomerInvoiceRequest.CustomerId)
+	if getCustomerInvoiceRequest.ProductId == "" {
+		getCustomerInvoiceRequest.ProductId = "1"
+	}
+	if getCustomerInvoiceRequest.CustomerId == "" {
+		return nil, errors.New("'CustomerId' is a required field");
 	}
 
-	if err := ic.validate(invoiceKey, signature); err != nil {
-		return nil, err
-	}
-
-	queryParams, err := ic.getQueryParams(invoiceKey)
+	queryParams, err := ic.getQueryParams(getCustomerInvoiceRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -236,18 +236,8 @@ func (ic *InvoiceClient) sendGetRequest(path string, queryParams string, signatu
 	return body, err
 }
 
-func (ic *InvoiceClient) validate(invoiceKey interface{}, signature string) error {
-	validate := validator.New()
-	err := validate.Struct(invoiceKey)
-	if err != nil {
-		ic.logf("%s validation error: %s", signature, err)
-		return errors.New("Missing required field in invoice key")
-	}
-	return nil
-}
-
-func (ic *InvoiceClient) getQueryParams(invoiceKey interface{}) (string, error) {
-	params, err := query.Values(invoiceKey)
+func (ic *InvoiceClient) getQueryParams(payload interface{}) (string, error) {
+	params, err := query.Values(payload)
 	if err != nil {
 		ic.logf("Invoice API error: %s", err)
 		return "", errors.New("Error parsing invoice key")
