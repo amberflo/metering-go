@@ -17,14 +17,24 @@ func NewPromotionClient(apiKey string, opts ...ClientOption) *PromotionClient {
 }
 
 type CustomerAppliedPromotion struct {
-	CustomerId           string  `json:"customerId"`
-	PromotionId          string  `json:"promotionId"`
-	ProductId            string  `json:"productId"`
-	AppliedTimeInSeconds int64   `json:"appliedTimeInSeconds"`
-	AddedTimeInSeconds   int64   `json:"addedTimeInSeconds"`
-	RemovedTimeInSeconds int64   `json:"removedTimeInSeconds"`
-	RelationId           string  `json:"relationId"`
-	Priority             float64 `json:"priority"`
+	CustomerId            string                 `json:"customerId"`
+	PromotionId           string                 `json:"promotionId"`
+	ProductId             string                 `json:"productId"`
+	AppliedTimeInSeconds  int64                  `json:"appliedTimeInSeconds"`
+	AddedTimeInSeconds    int64                  `json:"addedTimeInSeconds"`
+	RemovedTimeInSeconds  int64                  `json:"removedTimeInSeconds"`
+	RelationId            string                 `json:"relationId"`
+	Priority              float64                `json:"priority"`
+	EntityProductInvoices []EntityProductInvoice `json:"entityProductInvoices"`
+	AmountLeftInCycle     float64                `json:"amountLeftInCycle"`
+	TotalAmountLeft       float64                `json:"totalAmountLeft"`
+}
+
+type EntityProductInvoice struct {
+    InvoiceUri           string  `json:"invoiceUri"`
+    CreatedTimeInSeconds int64   `json:"createdTimeInSeconds"`
+    Amount               float64 `json:"amount"`
+    InvoiceAmount        float64 `json:"invoiceAmount"`
 }
 
 type ApplyPromotionRequest struct {
