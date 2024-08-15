@@ -31,16 +31,16 @@ type CustomerAppliedPromotion struct {
 }
 
 type EntityProductInvoice struct {
-    InvoiceUri           string  `json:"invoiceUri"`
-    CreatedTimeInSeconds int64   `json:"createdTimeInSeconds"`
-    Amount               float64 `json:"amount"`
-    InvoiceAmount        float64 `json:"invoiceAmount"`
+	InvoiceUri           string  `json:"invoiceUri"`
+	CreatedTimeInSeconds int64   `json:"createdTimeInSeconds"`
+	Amount               float64 `json:"amount"`
+	InvoiceAmount        float64 `json:"invoiceAmount"`
 }
 
 type ApplyPromotionRequest struct {
-	CustomerId  string `json:"customerId"`
-	PromotionId string `json:"promotionId"`
-	ProductId   string `json:"productId"`
+	CustomerId       string     `json:"customerId"`
+	PromotionId      string     `json:"promotionId"`
+	ProductId        string     `json:"productId"`
 	AppliedTimeRange *TimeRange `json:"appliedTimeRange,omitempty"`
 }
 

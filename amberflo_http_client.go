@@ -29,7 +29,7 @@ func NewAmberfloHttpClient(apiKey string, logger Logger, httpClient http.Client)
 	return client
 }
 
-//http client to make REST call
+// http client to make REST call
 func (client *AmberfloHttpClient) sendHttpRequest(apiName string, url string, httpMethod string, payload []byte) ([]byte, error) {
 	signature := fmt.Sprintf("sendHttpRequest(%s, %s, %s): ", apiName, httpMethod, url)
 
