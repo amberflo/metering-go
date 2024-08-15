@@ -86,7 +86,7 @@ type CreditUnit struct {
 	ShortName       string  `json:"shortName"`
 	Name            string  `json:"name"`
 	Description     string  `json:"description"`
-	ratioToCurrency float64 `json:"ratioToCurrency"`
+	RatioToCurrency float64 `json:"ratioToCurrency"`
 }
 
 type CustomerProductInvoice struct {
@@ -114,18 +114,18 @@ type CustomerProductInvoice struct {
 }
 
 type GetCustomerInvoiceRequest struct {
-	CustomerId         string `json:"customerId" url:"customerId"`
-	ProductId          string `json:"productId" url:"productId"`
-	FromCache          bool   `json:"fromCache" url:"fromCache"`
-	WithPaymentStatus  bool   `json:"withPaymentStatus" url:"withPaymentStatus"`
+	CustomerId        string `json:"customerId" url:"customerId"`
+	ProductId         string `json:"productId" url:"productId"`
+	FromCache         bool   `json:"fromCache" url:"fromCache"`
+	WithPaymentStatus bool   `json:"withPaymentStatus" url:"withPaymentStatus"`
 }
 
 type GetCustomerInvoiceByDateRequest struct {
 	GetCustomerInvoiceRequest
-	ProductPlanId      string `json:"productPlanId" url:"productPlanId"`
-	Year               int64  `json:"year" url:"year"`
-	Month              int64  `json:"month" url:"month"`
-	Day                int64  `json:"day" url:"day"`
+	ProductPlanId string `json:"productPlanId" url:"productPlanId"`
+	Year          int64  `json:"year" url:"year"`
+	Month         int64  `json:"month" url:"month"`
+	Day           int64  `json:"day" url:"day"`
 }
 
 func NewInvoiceClient(apiKey string, opts ...ClientOption) *InvoiceClient {
@@ -141,21 +141,21 @@ func (ic *InvoiceClient) GetLatestInvoice(getCustomerInvoiceRequest *GetCustomer
 		getCustomerInvoiceRequest.ProductId = "1"
 	}
 	if getCustomerInvoiceRequest.CustomerId == "" {
-		return nil, errors.New("'CustomerId' is a required field");
+		return nil, errors.New("'CustomerId' is a required field")
 	}
 
 	queryParams, err := ic.getQueryParams(getCustomerInvoiceRequest)
 	if err != nil {
 		return nil, err
 	}
-	queryParams = "latest=true&" + queryParams;
+	queryParams = "latest=true&" + queryParams
 
 	body, err := ic.sendGetRequest("", queryParams, signature)
 	if err != nil {
 		return nil, err
 	}
 
-	var customerProductInvoice *CustomerProductInvoice;
+	var customerProductInvoice *CustomerProductInvoice
 	err = json.Unmarshal(body, &customerProductInvoice)
 	if err != nil {
 		return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
@@ -170,11 +170,11 @@ func (ic *InvoiceClient) GetInvoice(getCustomerInvoiceByDateRequest *GetCustomer
 		getCustomerInvoiceByDateRequest.ProductId = "1"
 	}
 	if getCustomerInvoiceByDateRequest.CustomerId == "" ||
-			getCustomerInvoiceByDateRequest.ProductPlanId == "" ||
-			getCustomerInvoiceByDateRequest.Year <= 0 ||
-			getCustomerInvoiceByDateRequest.Month <= 0 ||
-			getCustomerInvoiceByDateRequest.Day <= 0 {
-		return nil, errors.New("'ProductPlanId', 'Year', 'Month' and 'Day' are required fields");
+		getCustomerInvoiceByDateRequest.ProductPlanId == "" ||
+		getCustomerInvoiceByDateRequest.Year <= 0 ||
+		getCustomerInvoiceByDateRequest.Month <= 0 ||
+		getCustomerInvoiceByDateRequest.Day <= 0 {
+		return nil, errors.New("'ProductPlanId', 'Year', 'Month' and 'Day' are required fields")
 	}
 
 	queryParams, err := ic.getQueryParams(getCustomerInvoiceByDateRequest)
@@ -187,7 +187,7 @@ func (ic *InvoiceClient) GetInvoice(getCustomerInvoiceByDateRequest *GetCustomer
 		return nil, err
 	}
 
-	var customerProductInvoice *CustomerProductInvoice;
+	var customerProductInvoice *CustomerProductInvoice
 	err = json.Unmarshal(body, &customerProductInvoice)
 	if err != nil {
 		return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)
@@ -202,7 +202,7 @@ func (ic *InvoiceClient) ListInvoice(getCustomerInvoiceRequest *GetCustomerInvoi
 		getCustomerInvoiceRequest.ProductId = "1"
 	}
 	if getCustomerInvoiceRequest.CustomerId == "" {
-		return nil, errors.New("'CustomerId' is a required field");
+		return nil, errors.New("'CustomerId' is a required field")
 	}
 
 	queryParams, err := ic.getQueryParams(getCustomerInvoiceRequest)
@@ -215,7 +215,7 @@ func (ic *InvoiceClient) ListInvoice(getCustomerInvoiceRequest *GetCustomerInvoi
 		return nil, err
 	}
 
-	var customerProductInvoice *[]CustomerProductInvoice;
+	var customerProductInvoice *[]CustomerProductInvoice
 	err = json.Unmarshal(body, &customerProductInvoice)
 	if err != nil {
 		return nil, fmt.Errorf("%s Error reading JSON body: %s", signature, err)

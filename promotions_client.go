@@ -16,11 +16,13 @@ func NewPromotionClient(apiKey string, opts ...ClientOption) *PromotionClient {
 	return pc
 }
 
+// Deprecated: AppliedTimeInSeconds is deprecated.
 type CustomerAppliedPromotion struct {
 	CustomerId            string                 `json:"customerId"`
 	PromotionId           string                 `json:"promotionId"`
 	ProductId             string                 `json:"productId"`
 	AppliedTimeInSeconds  int64                  `json:"appliedTimeInSeconds"`
+	AppliedTimeRange      *TimeRange             `json:"appliedTimeRange"`
 	AddedTimeInSeconds    int64                  `json:"addedTimeInSeconds"`
 	RemovedTimeInSeconds  int64                  `json:"removedTimeInSeconds"`
 	RelationId            string                 `json:"relationId"`
@@ -31,16 +33,17 @@ type CustomerAppliedPromotion struct {
 }
 
 type EntityProductInvoice struct {
-    InvoiceUri           string  `json:"invoiceUri"`
-    CreatedTimeInSeconds int64   `json:"createdTimeInSeconds"`
-    Amount               float64 `json:"amount"`
-    InvoiceAmount        float64 `json:"invoiceAmount"`
+	InvoiceUri           string  `json:"invoiceUri"`
+	CreatedTimeInSeconds int64   `json:"createdTimeInSeconds"`
+	Amount               float64 `json:"amount"`
+	InvoiceAmount        float64 `json:"invoiceAmount"`
 }
 
 type ApplyPromotionRequest struct {
-	CustomerId  string `json:"customerId"`
-	PromotionId string `json:"promotionId"`
-	ProductId   string `json:"productId"`
+	CustomerId       string     `json:"customerId"`
+	PromotionId      string     `json:"promotionId"`
+	ProductId        string     `json:"productId"`
+	AppliedTimeRange *TimeRange `json:"appliedTimeRange,omitempty"`
 }
 
 type RemovePromotionRequest struct {

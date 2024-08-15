@@ -37,7 +37,7 @@ type Message struct {
 	SentAt    string `json:"-"`
 }
 
-//Metering message
+// Metering message
 type MeterMessage struct {
 	UniqueId          string            `json:"uniqueId"`
 	MeterApiName      string            `json:"meterApiName"`
@@ -104,7 +104,7 @@ type Metering struct {
 	counter int
 }
 
-//Create a new instance with a custom logger
+// Create a new instance with a custom logger
 func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	m := &Metering{
 		Endpoint:        IngestEndpoint,
@@ -138,7 +138,7 @@ func NewMeteringClient(apiKey string, opts ...MeteringOption) *Metering {
 	return m
 }
 
-//Queue a metering message to send to Ingest API. Messages are flushes periodically at IntervalSeconds or when the BatchSize limit is exceeded.
+// Queue a metering message to send to Ingest API. Messages are flushes periodically at IntervalSeconds or when the BatchSize limit is exceeded.
 func (m *Metering) Meter(msg *MeterMessage) error {
 	if msg.MeterApiName == "" {
 		return errors.New("'MeterName' is required field")
@@ -155,12 +155,12 @@ func (m *Metering) Meter(msg *MeterMessage) error {
 	return nil
 }
 
-//Start goroutine for concurrent execution to monitor channels
+// Start goroutine for concurrent execution to monitor channels
 func (m *Metering) startLoop() {
 	go m.loop()
 }
 
-//Queue the metering message
+// Queue the metering message
 func (m *Metering) queue(msg message) {
 	m.once.Do(m.startLoop)
 	msg.setMessageId(m.uid())
@@ -169,7 +169,7 @@ func (m *Metering) queue(msg message) {
 	m.msgs <- msg
 }
 
-//Flush all messages in the queue, stop the timer, close all channels, shutdown the client
+// Flush all messages in the queue, stop the timer, close all channels, shutdown the client
 func (m *Metering) Shutdown() error {
 	m.log("Running shutdown....")
 	m.once.Do(m.startLoop)
@@ -183,7 +183,7 @@ func (m *Metering) Shutdown() error {
 	return nil
 }
 
-//Sends batch to API asynchonrously and limits the number of concurrrent calls to API
+// Sends batch to API asynchonrously and limits the number of concurrrent calls to API
 func (m *Metering) sendAsync(msgs []interface{}) {
 	m.mutex.Lock()
 
@@ -211,7 +211,7 @@ func (m *Metering) sendAsync(msgs []interface{}) {
 	}()
 }
 
-//Send the batch request with retry
+// Send the batch request with retry
 func (m *Metering) send(msgs []interface{}) error {
 	if len(msgs) == 0 {
 		return nil
@@ -250,7 +250,7 @@ func backoffDelay(retryNumber int) time.Duration {
 	return time.Duration(duration * rand.Float64() * oneSecond)
 }
 
-//Ingest Api Client code
+// Ingest Api Client code
 func (m *Metering) ingestToApi(b []byte) error {
 	m.logf("Ingest API Payload %s", string(b))
 	url := m.Endpoint + "/ingest"
@@ -263,7 +263,7 @@ func (m *Metering) ingestToApi(b []byte) error {
 	return nil
 }
 
-//Run the listener loop in a separate thread to monitor all channels
+// Run the listener loop in a separate thread to monitor all channels
 func (m *Metering) loop() {
 	var msgs []interface{}
 	tick := time.NewTicker(m.IntervalSeconds)
