@@ -86,7 +86,7 @@ type CreditUnit struct {
 	ShortName       string  `json:"shortName"`
 	Name            string  `json:"name"`
 	Description     string  `json:"description"`
-	ratioToCurrency float64 `json:"ratioToCurrency"`
+	RatioToCurrency float64 `json:"ratioToCurrency"`
 }
 
 type CustomerProductInvoice struct {

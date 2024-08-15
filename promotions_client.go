@@ -41,6 +41,7 @@ type ApplyPromotionRequest struct {
 	CustomerId  string `json:"customerId"`
 	PromotionId string `json:"promotionId"`
 	ProductId   string `json:"productId"`
+	AppliedTimeRange *TimeRange `json:"appliedTimeRange,omitempty"`
 }
 
 type RemovePromotionRequest struct {
