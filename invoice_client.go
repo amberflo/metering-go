@@ -107,6 +107,8 @@ type CustomerProductInvoice struct {
 	PaymentCreatedInSeconds           int64                           `json:"paymentCreatedInSeconds"`
 	ExternalSystemStatus              string                          `json:"externalSystemStatus"`
 	InvoiceBillInCredits              ProductPlanBill                 `json:"invoiceBillInCredits"`
+	PrepaidPriceUsedBaseCurrency      float64                         `json:"prepaidPriceUsedBaseCurrency"`
+	PrepaidPriceUsed                  float64                         `json:"prepaidPriceUsed"`
 	AvailablePrepaidLeft              float64                         `json:"availablePrepaidLeft"`
 	AvailablePrepaidLeftInCredits     float64                         `json:"availablePrepaidLeftInCredits"`
 	AvailablePayAsYouGoMoney          float64                         `json:"availablePayAsYouGoMoney"`
