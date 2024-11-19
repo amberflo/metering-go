@@ -150,7 +150,7 @@ func (pc *PromotionClient) ListAppliedPromotion(customerId string) (*[]CustomerA
 func (pc *PromotionClient) RemovePromotion(request *RemovePromotionRequest) error {
 	signature := fmt.Sprintf("RemovePromotion(%s): ", request)
 
-	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions?CustomerId=%s&PromotionId=%s", Endpoint, request.CustomerId, request.PromotionId)
+	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions?CustomerId=%s&Id=%s", Endpoint, request.CustomerId, request.PromotionId)
 	_, err := pc.AmberfloHttpClient.sendHttpRequest("Customer Promotions", url, "DELETE", nil)
 	if err != nil {
 		pc.logf("%s API error: %s", signature, err)
