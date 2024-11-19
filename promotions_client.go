@@ -18,7 +18,7 @@ func NewPromotionClient(apiKey string, opts ...ClientOption) *PromotionClient {
 
 // Deprecated: AppliedTimeInSeconds is deprecated.
 type CustomerAppliedPromotion struct {
-    Id                    string                 `json:"id"`
+	Id                    string                 `json:"id"`
 	CustomerId            string                 `json:"customerId"`
 	PromotionId           string                 `json:"promotionId"`
 	ProductId             string                 `json:"productId"`
