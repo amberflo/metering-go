@@ -18,6 +18,7 @@ func NewPromotionClient(apiKey string, opts ...ClientOption) *PromotionClient {
 
 // Deprecated: AppliedTimeInSeconds is deprecated.
 type CustomerAppliedPromotion struct {
+	Id                    string                 `json:"id"`
 	CustomerId            string                 `json:"customerId"`
 	PromotionId           string                 `json:"promotionId"`
 	ProductId             string                 `json:"productId"`
@@ -48,7 +49,7 @@ type ApplyPromotionRequest struct {
 
 type RemovePromotionRequest struct {
 	CustomerId  string `json:"customerId"`
-	PromotionId string `json:"promotionId"`
+	Id          string `json:"id"`
 	RelationId  string `json:"relationId"`
 }
 
@@ -100,7 +101,7 @@ type Promotion struct {
 }
 
 func (pc *PromotionClient) ApplyPromotion(request *ApplyPromotionRequest) (*CustomerAppliedPromotion, error) {
-	signature := fmt.Sprintf("ApplyPromotion(%s): ", request)
+	signature := fmt.Sprintf("ApplyPromotion(%v): ", request)
 
 	request.ProductId = "1"
 
@@ -150,7 +151,7 @@ func (pc *PromotionClient) ListAppliedPromotion(customerId string) (*[]CustomerA
 func (pc *PromotionClient) RemovePromotion(request *RemovePromotionRequest) error {
 	signature := fmt.Sprintf("RemovePromotion(%s): ", request)
 
-	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions?CustomerId=%s&PromotionId=%s", Endpoint, request.CustomerId, request.PromotionId)
+	url := fmt.Sprintf("%s/payments/pricing/amberflo/customer-promotions?CustomerId=%s&Id=%s", Endpoint, request.CustomerId, request.Id)
 	_, err := pc.AmberfloHttpClient.sendHttpRequest("Customer Promotions", url, "DELETE", nil)
 	if err != nil {
 		pc.logf("%s API error: %s", signature, err)
