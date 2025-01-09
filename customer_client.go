@@ -19,15 +19,24 @@ type CustomerClient struct {
 	BaseClient
 }
 
+type Address struct {
+	Line1      string `json:"line1"`
+	State      string `json:"state"`
+	City       string `json:"city"`
+	PostalCode string `json:"postalCode"`
+	Country    string `json:"country"`
+}
+
 type Customer struct {
-	CustomerId     string            `json:"customerId"`
-	CustomerName   string            `json:"customerName"`
-	CustomerEmail  string            `json:"customerEmail"`
-	Traits         map[string]string `json:"traits,omitempty"`
-	LifecycleStage LifecycleStage    `json:"lifecycleStage,omitempty"`
-	Enabled        bool              `json:"enabled"`
-	UpdateTime     int64             `json:"updateTime,omitempty"`
-	CreateTime     int64             `json:"createTime,omitempty"`
+	CustomerId      string            `json:"customerId"`
+	CustomerName    string            `json:"customerName"`
+	CustomerEmail   string            `json:"customerEmail"`
+	Traits          map[string]string `json:"traits,omitempty"`
+	CustomerAddress Address           `json:"address"`
+	LifecycleStage  LifecycleStage    `json:"lifecycleStage,omitempty"`
+	Enabled         bool              `json:"enabled"`
+	UpdateTime      int64             `json:"updateTime,omitempty"`
+	CreateTime      int64             `json:"createTime,omitempty"`
 }
 
 type UpdateLifecycleStageRequest struct {
