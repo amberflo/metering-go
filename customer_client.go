@@ -32,7 +32,7 @@ type Customer struct {
 	CustomerName    string            `json:"customerName"`
 	CustomerEmail   string            `json:"customerEmail"`
 	Traits          map[string]string `json:"traits,omitempty"`
-	CustomerAddress Address           `json:"address,omitempty"`
+	CustomerAddress *Address          `json:"address,omitempty"`
 	LifecycleStage  LifecycleStage    `json:"lifecycleStage,omitempty"`
 	Enabled         bool              `json:"enabled"`
 	UpdateTime      int64             `json:"updateTime,omitempty"`
