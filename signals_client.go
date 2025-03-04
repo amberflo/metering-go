@@ -54,7 +54,7 @@ type Notification struct {
 	NotificationType   NotificationType    `json:"notificationType"`
 	MeterId            string              `json:"meterId,omitempty"`
 	ThresholdCondition ThresholdCondition  `json:"thresholdCondition,omitempty"`
-	ThresholdValue     string              `json:"thresholdValue"`
+	ThresholdValue     float64             `json:"thresholdValue"`
 	Range              AggregationInterval `json:"range,omitempty"`
 	Cron               string              `json:"cron,omitempty"`
 	Email              []string            `json:"email,omitempty"`
