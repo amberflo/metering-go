@@ -159,6 +159,7 @@ func main() {
 		TimeGroupingInterval: metering.Day,
 		GroupBy:              []string{"customerId"},
 		TimeRange:            timeRange,
+		Take:                 take,
 	})
 	fmt.Println("Usage by meterApiName in json format")
 	printUsageData(*usageResult, err)
@@ -613,7 +614,7 @@ func main() {
 		Name:               "invoice-tracker-alert",
 		NotificationType:   metering.Invoice,
 		Email:              []string{"amberflo.tester@gmail.com"},
-		ThresholdValue:     "200",
+		ThresholdValue:     200,
 		CustomerFilterMode: metering.PerCustomer,
 		Enabled:            true,
 	}
@@ -626,7 +627,7 @@ func main() {
 	}
 
 	//update an existing signal
-	invoiceAlert.ThresholdValue = "150"
+	invoiceAlert.ThresholdValue = 150
 	invoiceAlert.Enabled = false //disable a signal without deleting
 	invoiceAlert, err = signalsClient.UpdateSignal(invoiceAlert)
 	if err != nil {
